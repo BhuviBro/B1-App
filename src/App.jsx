@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useStore } from './hooks/useStore';
-import { calcOverallBalance } from './utils/storage';
+
 import StatusPanel from './components/StatusPanel';
 import Transactions from './components/Transactions';
 import AddEntry from './components/AddEntry';
