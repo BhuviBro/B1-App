@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react';
+import ae from './AddEntry.module.css';
 import { uid, fmt, todayStr } from '../utils/storage';
 import { Icon } from './Icons';
 import Recurring from './Recurring';
 import s from './Settings.module.css';
 
 const TYPE_TABS = ['debit', 'credit', 'returnable'];
-const [recCat, setRecCat] = useState('other_d');
 const TYPE_LABEL = { debit: 'Debit', credit: 'Credit', returnable: 'Returnable' };
 const SUGGESTED_ICONS = ['food', 'fuel', 'shopping', 'rent', 'medical', 'salary', 'received', 'travel', 'repayment', 'other'];
 
@@ -28,6 +28,8 @@ export default function Settings({
   const [recAmt, setRecAmt] = useState('');
   const [recDay, setRecDay] = useState('1');
   const [recAlert, setRecAlert] = useState('5');
+  const [recCat, setRecCat] = useState('other_d');  // ← add here
+
 
   // Radar state
   const [showRadar, setShowRadar] = useState(false);
@@ -359,7 +361,6 @@ export default function Settings({
                 <label className={s.lbl}>Label</label>
                 <input className={s.input} value={recLabel} onChange={e => setRecLabel(e.target.value)} placeholder="e.g. Kredit Bee, Rent…" autoFocus />
               </div>
-
               <div className={s.row2}>
                 <div className={s.field}>
                   <label className={s.lbl}>Amount ₹</label>
@@ -375,21 +376,20 @@ export default function Settings({
                 <input className={`${s.input} ${s.mono}`} type="number" min="1" max="15" value={recAlert} onChange={e => setRecAlert(e.target.value)} placeholder="5" inputMode="numeric" />
                 <span className={s.hint2}>Alert {recAlert || 5} days before day {recDay || 1} each month.</span>
               </div>
-            </div>
-            <div className={s.field}>
-              <label className={s.lbl}>Category</label>
-              <div className={s.iconGrid} style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-                {(categories?.debit || []).map(cat => (
-                  <button
-                    key={cat.id}
-                    className={`${s.iconBtn} ${recCat === cat.id ? s.iconBtnSel : ''}`}
-                    onClick={() => setRecCat(cat.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px' }}
-                  >
-                    <Icon name={cat.icon || 'other'} size={15} stroke={recCat === cat.id ? 'var(--blue)' : 'var(--text3)'} />
-                    <span style={{ fontSize: '12px', color: recCat === cat.id ? 'var(--blue)' : 'var(--text2)' }}>{cat.name}</span>
-                  </button>
-                ))}
+              <div className={s.field}>
+                <label className={s.lbl}>Category</label>
+                <div className={ae.catGrid} style={{ marginTop: '6px' }}>
+                  {(categories?.debit || []).map(cat => (
+                    <button
+                      key={cat.id}
+                      className={`${ae.catPill} ${recCat === cat.id ? ae.catSel : ''}`}
+                      onClick={() => setRecCat(cat.id)}
+                    >
+                      <Icon name={cat.icon || 'other'} size={13} stroke="currentColor" />
+                      <span>{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             <div className={s.subFooter}>
