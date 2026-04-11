@@ -113,27 +113,29 @@ export function calcSummary(monthData, allMonthsData) {
   const income  = entries.filter(e => e.type === 'credit' && !e.isReturnCredit).reduce((s, e) => s + e.amount, 0);
   const spent   = entries.filter(e => e.type === 'debit').reduce((s, e) => s + e.amount, 0);
 
-  // netLent across ALL months
-  let netLent = 0;
+  // netLent — only current month's pending
+  const lent     = entries.filter(e => e.type === 'returnable').reduce((s, e) => s + e.amount, 0);
+  const returned = entries.filter(e => e.type === 'returnable').reduce((s, e) =>
+    s + (e.returns || []).reduce((rs, r) => rs + r.amount, 0), 0);
+  const netLent = Math.max(0, lent - returned);
+
+  // netLent across ALL months for display in Lent card
+  let totalNetLent = netLent;
   if (allMonthsData) {
+    totalNetLent = 0;
     Object.values(allMonthsData).forEach(mo => {
       (mo.entries || []).filter(e => e.type === 'returnable').forEach(e => {
-        const returned = (e.returns || []).reduce((s, r) => s + r.amount, 0);
-        netLent += Math.max(0, e.amount - returned);
+        const ret = (e.returns || []).reduce((s, r) => s + r.amount, 0);
+        totalNetLent += Math.max(0, e.amount - ret);
       });
     });
-  } else {
-    const lent     = entries.filter(e => e.type === 'returnable').reduce((s, e) => s + e.amount, 0);
-    const returned = entries.filter(e => e.type === 'returnable').reduce((s, e) =>
-      s + (e.returns || []).reduce((rs, r) => rs + r.amount, 0), 0);
-    netLent = lent - returned;
   }
 
   const totalBalance = (monthData.basepower || 0) + income;
+  // remaining uses only current month netLent — previous months already baked into opening balance
   const remaining    = totalBalance - spent - netLent;
-  return { totalBalance, income, spent, netLent, remaining };
+  return { totalBalance, income, spent, netLent: totalNetLent, remaining };
 }
-
 export function calcOverallBalance(data) {
   let total = 0;
   Object.values(data.months || {}).forEach(m => {
