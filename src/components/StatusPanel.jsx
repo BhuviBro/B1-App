@@ -11,19 +11,20 @@ const CARDS = [
 
 export default function StatusPanel({ monthData, overall, data }) {
   const [active, setActive] = useState(null);
-  const summary = calcSummary(monthData);
+const summary = calcSummary(monthData, data?.months);
+
 
   // Income excludes return credits
   const realIncome = (monthData.entries || [])
     .filter(e => e.type === 'credit' && !e.isReturnCredit)
     .reduce((s, e) => s + e.amount, 0);
 
-  const vals = {
-    balance: summary.remaining,
-    spent:   summary.spent,
-    income:  realIncome,
-    lent:    summary.netLent,
-  };
+ const vals = {
+  balance: summary.remaining,
+  spent:   summary.spent,
+  income:  realIncome,
+  lent:    summary.netLent,
+};
 
   function toggle(key) { setActive(a => a === key ? null : key); }
   const activeCard = CARDS.find(c => c.key === active);
@@ -105,19 +106,23 @@ function BreakdownContent({ type, monthData, summary, realIncome, data }) {
       </div>
     );
   }
-
-  if (type === 'lent') {
-    const lentEntries = entries.filter(e => e.type === 'returnable');
+if (type === 'lent') {
+    const allLent = [];
+    Object.values(data?.months || {}).forEach(mo => {
+      (mo.entries || []).filter(e => e.type === 'returnable').forEach(e => {
+        const returned = (e.returns || []).reduce((s, r) => s + r.amount, 0);
+        const pending  = Math.max(0, e.amount - returned);
+        allLent.push({ ...e, pending, returned });
+      });
+    });
     return (
       <div className={s.bdRows}>
-        {!lentEntries.length && <div className={s.bdEmpty}>No lent entries this month</div>}
-        {lentEntries.map(e => {
-          const returned = (e.returns || []).reduce((s, r) => s + r.amount, 0);
-          const pending  = Math.max(0, e.amount - returned);
-          return pending > 0
-            ? <BdRow key={e.id} label={e.label} val={fmt(pending)} color="amber" />
-            : <BdRow key={e.id} label={`${e.label} ✓`} val={fmt(e.amount)} color="green" />;
-        })}
+        {!allLent.length && <div className={s.bdEmpty}>No lent entries</div>}
+        {allLent.map(e => (
+          e.pending > 0
+            ? <BdRow key={e.id} label={e.label} val={fmt(e.pending)} color="amber" />
+            : <BdRow key={e.id} label={`${e.label} ✓`} val={fmt(e.amount)} color="green" />
+        ))}
         <BdTotal label="Net Pending" val={fmt(summary.netLent)} color={summary.netLent > 0 ? 'amber' : 'green'} />
       </div>
     );

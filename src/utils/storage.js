@@ -61,7 +61,7 @@ export function getMonthWithCarryForward(data, key) {
 export function getClosingBalance(data, key) {
   const md = data.months?.[key];
   if (!md) return null;
-  return calcSummary(md).remaining;
+  return calcSummary(md, data.months).remaining;
 }
 
 export function prevMonthKey(key) {
@@ -108,17 +108,30 @@ export function fmt(n) {
   return '₹' + Math.abs(Math.round(n)).toLocaleString('en-IN');
 }
 
-export function calcSummary(monthData) {
+export function calcSummary(monthData, allMonthsData) {
   const entries = monthData.entries || [];
   const income  = entries.filter(e => e.type === 'credit' && !e.isReturnCredit).reduce((s, e) => s + e.amount, 0);
   const spent   = entries.filter(e => e.type === 'debit').reduce((s, e) => s + e.amount, 0);
-  const lent    = entries.filter(e => e.type === 'returnable').reduce((s, e) => s + e.amount, 0);
-  const returned = entries.filter(e => e.type === 'returnable').reduce((s, e) =>
-    s + (e.returns || []).reduce((rs, r) => rs + r.amount, 0), 0);
-  const netLent      = lent - returned;
+
+  // netLent across ALL months
+  let netLent = 0;
+  if (allMonthsData) {
+    Object.values(allMonthsData).forEach(mo => {
+      (mo.entries || []).filter(e => e.type === 'returnable').forEach(e => {
+        const returned = (e.returns || []).reduce((s, r) => s + r.amount, 0);
+        netLent += Math.max(0, e.amount - returned);
+      });
+    });
+  } else {
+    const lent     = entries.filter(e => e.type === 'returnable').reduce((s, e) => s + e.amount, 0);
+    const returned = entries.filter(e => e.type === 'returnable').reduce((s, e) =>
+      s + (e.returns || []).reduce((rs, r) => rs + r.amount, 0), 0);
+    netLent = lent - returned;
+  }
+
   const totalBalance = (monthData.basepower || 0) + income;
   const remaining    = totalBalance - spent - netLent;
-  return { totalBalance, income, spent, lent, returned, netLent, remaining };
+  return { totalBalance, income, spent, netLent, remaining };
 }
 
 export function calcOverallBalance(data) {
