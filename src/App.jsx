@@ -13,6 +13,7 @@ import Recurring from './components/Recurring';
 import Login from './components/Login';
 import { Icon } from './components/Icons';
 import s from './App.module.css';
+import { calcOverallBalance, todayStr } from './utils/storage';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -38,6 +39,8 @@ export default function App() {
 
 // Separate component so useStore only runs when logged in
 // Replace the entire AppInner function in src/App.jsx with this:
+
+
 
 function AppInner({ user, signOut }) {
   // ── ALL useState hooks MUST be before any early return ──
@@ -74,16 +77,37 @@ function AppInner({ user, signOut }) {
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 2200); }
 
-  function handleSave(entry) {
-    if (editEntry_) { editEntry(editEntry_.id, entry); showToast('Entry updated.'); }
-    else { addEntry(entry); showToast('Entry saved.'); }
-    setEditEntry_(null);
-    setPrefillEntry(null);
+ function handleSave(entry) {
+  if (editEntry_) {
+    editEntry(editEntry_.id, entry);
+    showToast('Entry updated.');
+  } else {
+    addEntry(entry);
+    showToast('Entry saved.');
+    if (prefillEntry?.isRecurringPay && prefillEntry?.recurringId) {
+      markRecurring(prefillEntry.recurringId, 'paid');
+    }
   }
+  setEditEntry_(null);
+  setPrefillEntry(null);
+}
 
   function handleRadarBought(entry) { setPrefillEntry(entry); setSheetOpen(true); }
   function handleEdit(entry)        { setEditEntry_(entry); setSheetOpen(true); }
   function handleDelete(id)         { deleteEntry(id); showToast('Entry deleted.'); }
+  function handleRecurringPaid(rec) {
+  setEditEntry_(null);
+  setPrefillEntry({
+    amount: rec.amount,
+    type: 'debit',
+    label: rec.label,
+    category: rec.category || 'other_d',
+    date: todayStr(),
+    isRecurringPay: true,
+    recurringId: rec.id,
+  });
+  setSheetOpen(true);
+}
   function openNew()                { setEditEntry_(null); setPrefillEntry(null); setSheetOpen(true); }
 
   const allEntries = monthData.entries || [];
@@ -132,7 +156,15 @@ function AppInner({ user, signOut }) {
         {tab === 'command' && (
           <>
             <StatusPanel monthData={monthData} overall={overall} data={data} />
-            <Recurring recurring={recurring} currentKey={currentKey} onMark={markRecurring} inline />
+            
+             <Recurring recurring={recurring} currentKey={currentKey} onMark={(id, status) => {
+  if (status === 'paid') {
+    const rec = recurring.find(r => r.id === id);
+    if (rec) handleRecurringPaid(rec);
+  } else {
+    markRecurring(id, status);
+  }
+}} inline />
             <div className={s.feedHeader}>
               <span className={s.feedLabel}>RECENT TRANSACTIONS</span>
               <div className={s.basepowerRow}>
@@ -205,7 +237,14 @@ function AppInner({ user, signOut }) {
         onAddRecurring={addRecurring}
         onEditRecurring={editRecurring}
         onDeleteRecurring={deleteRecurring}
-        onMarkRecurring={markRecurring}
+       onMarkRecurring={(id, status) => {
+  if (status === 'paid') {
+    const rec = recurring.find(r => r.id === id);
+    if (rec) { handleRecurringPaid(rec); setSettingsOpen(false); }
+  } else {
+    markRecurring(id, status);
+  }
+}}
         radar={radar}
         onAddRadarItem={addRadarItem}
         onMarkRadarBought={markRadarBought}

@@ -49,31 +49,42 @@ export default function AddEntry({ open, onClose, onSave, editEntry, categories 
   }
 
   function addSub() { setSubItems(p => [...p, { name: '', amount: '' }]); }
-  function updateSub(i, field, val) {
-    setSubItems(p => p.map((si, idx) => idx === i ? { ...si, [field]: val } : si));
-  }
-  function removeSub(i) { setSubItems(p => p.filter((_, idx) => idx !== i)); }
-
-  function handleSave() {
-    const amt = parseFloat(amount);
-    if (!amt || amt <= 0) return;
-    // ensure category has a value
-    const finalCat = category || getDefaultCat(type);
-    const finalLabel = buildSmartLabel(label, finalCat, type, categories);
-    const cleanSubs = subItems
-      .filter(si => si.name || si.amount)
-      .map(si => ({ name: si.name || 'item', amount: parseFloat(si.amount) || 0 }));
-    onSave({
-      label: finalLabel,
-      amount: amt,
-      type,
-      category: finalCat,
-      person: person.trim(),
-      date, time,
-      subItems: cleanSubs,
-    });
-    onClose();
-  }
+ function updateSub(i, field, val) {
+  setSubItems(p => {
+    const updated = p.map((si, idx) => idx === i ? { ...si, [field]: val } : si);
+    const total = updated.reduce((s, si) => s + (parseFloat(si.amount) || 0), 0);
+    if (total > 0) setAmount(String(total));
+    return updated;
+  });
+}
+function removeSub(i) {
+  setSubItems(p => {
+    const updated = p.filter((_, idx) => idx !== i);
+    const total = updated.reduce((s, si) => s + (parseFloat(si.amount) || 0), 0);
+    if (total > 0) setAmount(String(total));
+    return updated;
+  });
+}
+ function handleSave() {
+  const amt = parseFloat(amount);
+  if (!amt || amt <= 0) return;
+  const finalCat = category || getDefaultCat(type);
+  const finalLabel = buildSmartLabel(label, finalCat, type, categories);
+  const cleanSubs = subItems
+    .filter(si => si.name || si.amount)
+    .map(si => ({ name: si.name || 'item', amount: parseFloat(si.amount) || 0 }));
+  onSave({
+    label: finalLabel,
+    amount: amt,
+    type,
+    category: finalCat,
+    person: person.trim(),
+    date, time,
+    subItems: cleanSubs,
+    ...(editEntry?.isRecurringPay && { isRecurringEntry: true, recurringId: editEntry.recurringId }),
+  });
+  onClose();
+}
 
   const typeCats = getTypeCats();
   const isEdit = !!editEntry;

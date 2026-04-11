@@ -110,7 +110,7 @@ export function fmt(n) {
 
 export function calcSummary(monthData) {
   const entries = monthData.entries || [];
-  const income  = entries.filter(e => e.type === 'credit').reduce((s, e) => s + e.amount, 0);
+  const income  = entries.filter(e => e.type === 'credit' && !e.isReturnCredit).reduce((s, e) => s + e.amount, 0);
   const spent   = entries.filter(e => e.type === 'debit').reduce((s, e) => s + e.amount, 0);
   const lent    = entries.filter(e => e.type === 'returnable').reduce((s, e) => s + e.amount, 0);
   const returned = entries.filter(e => e.type === 'returnable').reduce((s, e) =>

@@ -146,37 +146,15 @@ function markRecurring(id, status) {
     const r = (d.recurring || []).find(x => x.id === id);
     if (!r) return;
     if (!r.history) r.history = {};
-
-    const mo = getMonthWithCarryForward(d, currentKey);
-
-    if (status === 'paid') {
-      // Create debit entry
-      const entryId = uid();
-      r.history[currentKey] = 'paid';
-      r._entryId = r._entryId || {};
-      r._entryId[currentKey] = entryId;
-      mo.entries.push({
-        id: entryId,
-        label: r.label,
-        amount: r.amount,
-        type: 'debit',
-        category: r.category || 'other_d',
-        date: todayStr(),
-        time: nowTimeStr(),
-        returns: [],
-        isRecurringEntry: true,
-        recurringId: r.id,
-      });
-    } else if (status === null) {
-      // Undo — remove the auto-created debit entry if it exists
+    if (status === null) {
       const entryId = r._entryId?.[currentKey];
       if (entryId) {
+        const mo = getMonthWithCarryForward(d, currentKey);
         mo.entries = mo.entries.filter(e => e.id !== entryId);
         delete r._entryId[currentKey];
       }
       r.history[currentKey] = null;
     } else {
-      // skipped
       r.history[currentKey] = status;
     }
   });

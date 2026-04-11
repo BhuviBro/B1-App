@@ -181,38 +181,54 @@ export default function Logs({ data, categories }) {
       {/* ENTRY LIST */}
       <div className={s.list}>
         {!filtered.length && <div className={s.noResults}>No entries match the current filters.</div>}
-        {filtered.map(e => {
+       {filtered.map(e => {
           const [y, m] = e.monthKey.split('-');
           const mLabel = `${MONTHS[parseInt(m)-1]} ${y}`;
           const showHdr = mLabel !== lastMonth;
           lastMonth = mLabel;
-          const catDef   = getCategoryDef(e.category, e.type, categories);
-          const iconName = catDef?.icon || e.category || 'other';
-          const color    = e.type === 'credit' ? 'green' : e.type === 'debit' ? 'red' : 'amber';
-          const prefix   = e.type === 'credit' ? '+' : '−';
-          const tagCls   = e.type === 'credit' ? s.tagGreen : e.type === 'debit' ? s.tagRed : s.tagAmber;
-
-          return (
-            <div key={e.id}>
-              {showHdr && <div className={s.monthHdr}>{mLabel}</div>}
-              <div className={s.row}>
-                <div className={s.rowIc}>
-                  <Icon name={iconName} size={18} stroke="var(--blue)" className={s.rowIcon} />
-                </div>
-                <div className={s.rowLeft}>
-                  <div className={s.rowName}>{e.label}</div>
-                  <div className={s.rowMeta}>
-                    <span className={s.rowDate}>{fmtDateTime(e.date, e.time)}</span>
-                    <span className={`${s.tag} ${tagCls}`}>{TYPE_LABEL[e.type]}</span>
-                    {catDef && <span className={s.tagCat}>{catDef.name}</span>}
-                  </div>
-                </div>
-                <div className={`${s.rowAmt} ${s[color]}`}>{prefix}{fmt(e.amount)}</div>
-              </div>
-            </div>
-          );
+          return <LogRow key={e.id} e={e} showHdr={showHdr} mLabel={mLabel} categories={categories} s={s} />;
         })}
       </div>
+    </div>
+  );
+}
+function LogRow({ e, showHdr, mLabel, categories, s }) {
+  const [open, setOpen] = useState(false);
+  const catDef   = getCategoryDef(e.category, e.type, categories);
+  const iconName = catDef?.icon || e.category || 'other';
+  const color    = e.type === 'credit' ? 'green' : e.type === 'debit' ? 'red' : 'amber';
+  const prefix   = e.type === 'credit' ? '+' : '−';
+  const tagCls   = e.type === 'credit' ? s.tagGreen : e.type === 'debit' ? s.tagRed : s.tagAmber;
+  const hasSubs  = e.subItems?.length > 0;
+
+  return (
+    <div>
+      {showHdr && <div className={s.monthHdr}>{mLabel}</div>}
+      <div className={`${s.row} ${hasSubs ? s.rowClickable : ''}`} onClick={() => hasSubs && setOpen(p => !p)}>
+        <div className={s.rowIc}>
+          <Icon name={iconName} size={18} stroke="var(--blue)" className={s.rowIcon} />
+        </div>
+        <div className={s.rowLeft}>
+          <div className={s.rowName}>{e.label}</div>
+          <div className={s.rowMeta}>
+            <span className={s.rowDate}>{fmtDateTime(e.date, e.time)}</span>
+            <span className={`${s.tag} ${tagCls}`}>{TYPE_LABEL[e.type]}</span>
+            {catDef && <span className={s.tagCat}>{catDef.name}</span>}
+            {hasSubs && <span className={s.tagSub}>{open ? '▲' : '▼'} breakdown</span>}
+          </div>
+        </div>
+        <div className={`${s.rowAmt} ${s[color]}`}>{prefix}{fmt(e.amount)}</div>
+      </div>
+      {open && hasSubs && (
+        <div className={s.subList}>
+          {e.subItems.map((si, i) => (
+            <div key={i} className={s.subItem}>
+              <span className={s.subName}>{si.name}</span>
+              <span className={s.subAmt}>₹{Math.round(si.amount).toLocaleString('en-IN')}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

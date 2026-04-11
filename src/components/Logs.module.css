@@ -67,3 +67,11 @@
 .tagCat{font-size:9px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:0 5px}
 .rowAmt{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;flex-shrink:0;letter-spacing:.02em}
 .green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}
+.rowClickable{cursor:pointer}
+.rowClickable:hover{background:var(--surface2)}
+.tagSub{font-size:9px;color:var(--blue);background:var(--blue-bg);padding:2px 6px;border-radius:99px;font-family:'Rajdhani',sans-serif;letter-spacing:.06em}
+.subList{background:var(--surface2);border:1px solid var(--border);border-radius:0 0 var(--radius-sm) var(--radius-sm);margin-top:-4px;padding:8px 14px 10px;margin-bottom:4px}
+.subItem{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.subItem:last-child{border:none}
+.subName{color:var(--text2)}
+.subAmt{font-family:'DM Mono',monospace;color:var(--text);font-size:11px}
