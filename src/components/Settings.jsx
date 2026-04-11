@@ -4,9 +4,10 @@ import { Icon } from './Icons';
 import Recurring from './Recurring';
 import s from './Settings.module.css';
 
-const TYPE_TABS  = ['debit', 'credit', 'returnable'];
+const TYPE_TABS = ['debit', 'credit', 'returnable'];
+const [recCat, setRecCat] = useState('other_d');
 const TYPE_LABEL = { debit: 'Debit', credit: 'Credit', returnable: 'Returnable' };
-const SUGGESTED_ICONS = ['food','fuel','shopping','rent','medical','salary','received','travel','repayment','other'];
+const SUGGESTED_ICONS = ['food', 'fuel', 'shopping', 'rent', 'medical', 'salary', 'received', 'travel', 'repayment', 'other'];
 
 export default function Settings({
   open, onClose,
@@ -17,22 +18,22 @@ export default function Settings({
   onReorderCategories,
   onOpenAddEntry,
 }) {
-  const [section, setSection]     = useState('recurring');
-  const [catType, setCatType]     = useState('debit');
-  const [catSheet, setCatSheet]   = useState(null);
-  const [catName, setCatName]     = useState('');
-  const [catIcon, setCatIcon]     = useState('food');
-  const [recSheet, setRecSheet]   = useState(null);
-  const [recLabel, setRecLabel]   = useState('');
-  const [recAmt, setRecAmt]       = useState('');
-  const [recDay, setRecDay]       = useState('1');
-  const [recAlert, setRecAlert]   = useState('5');
+  const [section, setSection] = useState('recurring');
+  const [catType, setCatType] = useState('debit');
+  const [catSheet, setCatSheet] = useState(null);
+  const [catName, setCatName] = useState('');
+  const [catIcon, setCatIcon] = useState('food');
+  const [recSheet, setRecSheet] = useState(null);
+  const [recLabel, setRecLabel] = useState('');
+  const [recAmt, setRecAmt] = useState('');
+  const [recDay, setRecDay] = useState('1');
+  const [recAlert, setRecAlert] = useState('5');
 
   // Radar state
-  const [showRadar, setShowRadar]     = useState(false);
-  const [radarSheet, setRadarSheet]   = useState(false);
-  const [radarName, setRadarName]     = useState('');
-  const [radarPrice, setRadarPrice]   = useState('');
+  const [showRadar, setShowRadar] = useState(false);
+  const [radarSheet, setRadarSheet] = useState(false);
+  const [radarName, setRadarName] = useState('');
+  const [radarPrice, setRadarPrice] = useState('');
 
   // Drag reorder state
   const dragIdx = useRef(null);
@@ -46,11 +47,11 @@ export default function Settings({
     setCatSheet(null);
   }
 
-  function openAddRec() { setRecLabel(''); setRecAmt(''); setRecDay('1'); setRecAlert('5'); setRecSheet({ mode: 'add' }); }
-  function openEditRec(rec) { setRecLabel(rec.label); setRecAmt(String(rec.amount)); setRecDay(String(rec.dueDay)); setRecAlert(String(rec.alertDaysBefore ?? 5)); setRecSheet({ mode: 'edit', rec }); }
+  function openAddRec() { setRecLabel(''); setRecAmt(''); setRecDay('1'); setRecAlert('5'); setRecCat('other_d'); setRecSheet({ mode: 'add' }); }
+  function openEditRec(rec) { setRecLabel(rec.label); setRecAmt(String(rec.amount)); setRecDay(String(rec.dueDay)); setRecAlert(String(rec.alertDaysBefore ?? 5)); setRecCat(rec.category || 'other_d'); setRecSheet({ mode: 'edit', rec }); }
   function saveRec() {
     if (!recLabel.trim() || !(parseFloat(recAmt) > 0)) return;
-    const payload = { label: recLabel.trim(), amount: parseFloat(recAmt), dueDay: parseInt(recDay) || 1, alertDaysBefore: parseInt(recAlert) || 5 };
+    const payload = { label: recLabel.trim(), amount: parseFloat(recAmt), dueDay: parseInt(recDay) || 1, alertDaysBefore: parseInt(recAlert) || 5, category: recCat };
     if (recSheet.mode === 'edit') onEditRecurring(recSheet.rec.id, payload);
     else onAddRecurring(payload);
     setRecSheet(null);
@@ -102,7 +103,7 @@ export default function Settings({
   if (!open) return null;
 
   const pendingRadar = radar.filter(r => !r.bought);
-  const boughtRadar  = radar.filter(r => r.bought);
+  const boughtRadar = radar.filter(r => r.bought);
 
   return (
     <>
@@ -115,7 +116,7 @@ export default function Settings({
         </div>
 
         <div className={s.tabs}>
-          {['recurring','categories','profile'].map(sec => (
+          {['recurring', 'categories', 'profile'].map(sec => (
             <button key={sec} className={`${s.tab} ${section === sec ? s.tabActive : ''}`} onClick={() => setSection(sec)}>
               {sec.charAt(0).toUpperCase() + sec.slice(1)}
             </button>
@@ -204,7 +205,7 @@ export default function Settings({
                     <span className={s.secLbl}>RADAR</span>
                     <span className={s.radarSub}> · {pendingRadar.length} pending</span>
                   </div>
-                  <div style={{display:'flex',gap:8}}>
+                  <div style={{ display: 'flex', gap: 8 }}>
                     <button className={s.addBtn} onClick={() => setRadarSheet(true)}>+ Add</button>
                     <button className={`${s.addBtn} ${s.radarToggle}`} onClick={() => setShowRadar(p => !p)}>
                       {showRadar ? 'Hide' : 'View all'}
@@ -358,6 +359,7 @@ export default function Settings({
                 <label className={s.lbl}>Label</label>
                 <input className={s.input} value={recLabel} onChange={e => setRecLabel(e.target.value)} placeholder="e.g. Kredit Bee, Rent…" autoFocus />
               </div>
+
               <div className={s.row2}>
                 <div className={s.field}>
                   <label className={s.lbl}>Amount ₹</label>
@@ -372,6 +374,22 @@ export default function Settings({
                 <label className={s.lbl}>Alert days before</label>
                 <input className={`${s.input} ${s.mono}`} type="number" min="1" max="15" value={recAlert} onChange={e => setRecAlert(e.target.value)} placeholder="5" inputMode="numeric" />
                 <span className={s.hint2}>Alert {recAlert || 5} days before day {recDay || 1} each month.</span>
+              </div>
+            </div>
+            <div className={s.field}>
+              <label className={s.lbl}>Category</label>
+              <div className={s.iconGrid} style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+                {(categories?.debit || []).map(cat => (
+                  <button
+                    key={cat.id}
+                    className={`${s.iconBtn} ${recCat === cat.id ? s.iconBtnSel : ''}`}
+                    onClick={() => setRecCat(cat.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px' }}
+                  >
+                    <Icon name={cat.icon || 'other'} size={15} stroke={recCat === cat.id ? 'var(--blue)' : 'var(--text3)'} />
+                    <span style={{ fontSize: '12px', color: recCat === cat.id ? 'var(--blue)' : 'var(--text2)' }}>{cat.name}</span>
+                  </button>
+                ))}
               </div>
             </div>
             <div className={s.subFooter}>
