@@ -20,7 +20,7 @@ const summary = calcSummary(monthData, data?.months);
     .reduce((s, e) => s + e.amount, 0);
 
  const vals = {
-  balance: summary.remaining,
+  balance: overall,
   spent:   summary.spent,
   income:  realIncome,
   lent:    summary.netLent,
