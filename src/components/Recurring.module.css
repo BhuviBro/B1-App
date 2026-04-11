@@ -1,0 +1,127 @@
+/* INLINE ALERT BANNER */
+.alertBanner {
+  margin: 0 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid;
+  gap: 12px;
+}
+.alertDue { background: var(--amber-bg); border-color: var(--amber); }
+.alertOverdue { background: var(--red-bg); border-color: var(--red); }
+.alertLeft { display: flex; align-items: center; gap: 10px; }
+.alertIcon { font-size: 18px; }
+.alertName { font-size: 13px; font-weight: 500; color: var(--text); }
+.alertSub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.markPaidBtn {
+  padding: 7px 14px;
+  border-radius: 99px;
+  border: 1px solid var(--amber);
+  background: transparent;
+  color: var(--amber);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.markPaidBtn:hover { background: var(--amber-bg); }
+
+/* FULL MODE */
+.wrap { display: flex; flex-direction: column; gap: 6px; }
+.empty { font-size: 13px; color: var(--text3); padding: 12px 0; line-height: 1.6; }
+
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.cardExp { border-color: var(--border2); }
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  cursor: pointer;
+  gap: 8px;
+}
+.cardHead:hover { background: var(--surface2); }
+.headLeft { flex: 1; min-width: 0; }
+.recName { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.recMeta {
+  font-size: 11px; color: var(--text3);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.tagDue { color: var(--amber); background: var(--amber-bg); padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+.tagOverdue { color: var(--red); background: var(--red-bg); padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+.tagPaid { color: var(--green); background: var(--green-bg); padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+.tagSkipped { color: var(--text3); background: var(--surface2); padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+.caret { font-size: 9px; color: var(--text3); flex-shrink: 0; }
+
+.cardBody {
+  border-top: 1px solid var(--border);
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.recActions { display: flex; gap: 8px; }
+.recActionsRow { display: flex; gap: 8px; }
+.btnPaid {
+  flex: 1; padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--green);
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 12px; font-weight: 500;
+  transition: opacity 0.15s;
+}
+.btnPaid:hover { opacity: 0.8; }
+.btnSkip {
+  flex: 1; padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  font-size: 12px; font-weight: 500;
+  transition: all 0.15s;
+}
+.btnSkip:hover { background: var(--surface2); color: var(--text); }
+.btnUndo {
+  flex: 1; padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  font-size: 12px; font-weight: 500;
+}
+.btnEdit {
+  flex: 1; padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 12px; font-weight: 500;
+  transition: background 0.15s;
+}
+.btnEdit:hover { background: var(--bg3); }
+.btnDelete {
+  flex: 1; padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--red-bg);
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 12px; font-weight: 500;
+  transition: opacity 0.15s;
+}
+.btnDelete:hover { opacity: 0.8; }

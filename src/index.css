@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Rajdhani:wght@500;600&family=DM+Sans:wght@300;400;500;600&family=Orbitron:wght@700;900&display=swap');
+
+:root {
+  --bg:#0a0a0f;--bg2:#111118;--bg3:#1a1a24;
+  --surface:#16161f;--surface2:#1e1e2a;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8e8f0;--text2:#8888a0;--text3:#44445a;
+  --red:#ff4a6b;--red-bg:rgba(255,74,107,0.12);
+  --green:#00e5a0;--green-bg:rgba(0,229,160,0.1);
+  --amber:#ffaa00;--amber-bg:rgba(255,170,0,0.1);
+  --blue:#4a9eff;--blue-bg:rgba(74,158,255,0.1);
+  --radius:14px;--radius-sm:8px;
+  --glow-blue:0 0 8px rgba(74,158,255,0.7),0 0 20px rgba(74,158,255,0.3);
+  --glow-green:0 0 8px rgba(0,229,160,0.7),0 0 20px rgba(0,229,160,0.3);
+  --glow-red:0 0 8px rgba(255,74,107,0.7),0 0 20px rgba(255,74,107,0.3);
+  --glow-amber:0 0 8px rgba(255,170,0,0.7),0 0 20px rgba(255,170,0,0.3);
+  --shadow:0 2px 12px rgba(0,0,0,0.4);
+}
+
+[data-theme="light"] {
+  --bg:#f4f4f8;--bg2:#ebebf0;--bg3:#e0e0e8;
+  --surface:#ffffff;--surface2:#f0f0f6;
+  --border:rgba(0,0,0,0.07);--border2:rgba(0,0,0,0.12);
+  --text:#111118;--text2:#5a5a72;--text3:#aaaabc;
+  --red:#e0284a;--red-bg:rgba(224,40,74,0.08);
+  --green:#00a872;--green-bg:rgba(0,168,114,0.08);
+  --amber:#cc8800;--amber-bg:rgba(204,136,0,0.08);
+  --blue:#1a78e0;--blue-bg:rgba(26,120,224,0.08);
+  --glow-blue:none;--glow-green:none;--glow-red:none;--glow-amber:none;
+  --shadow:0 2px 12px rgba(0,0,0,0.1);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+html,body,#root{
+  height:100%;background:var(--bg);
+  font-family:'DM Sans',sans-serif;
+  color:var(--text);font-size:15px;overscroll-behavior:none;
+}
+
+button{cursor:pointer;font-family:'DM Sans',sans-serif}
+input,select,textarea{font-family:'DM Sans',sans-serif}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.mono{font-family:'DM Mono',monospace}
+.rajdhani{font-family:'Rajdhani',sans-serif}
+.stencil{font-family:'Orbitron',monospace;letter-spacing:.02em}

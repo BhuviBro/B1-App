@@ -1,0 +1,29 @@
+.wrap{padding:0 16px 4px}
+.label{font-size:10px;color:var(--text3);font-family:'Rajdhani',sans-serif;letter-spacing:.14em;font-weight:600;padding:0 2px 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 13px 11px;cursor:pointer;transition:all .15s}
+.card:hover{background:var(--surface2)}
+.cardActive{border-color:var(--border2)}
+.card_blue.cardActive{border-color:var(--blue)}
+.card_green.cardActive{border-color:var(--green)}
+.card_red.cardActive{border-color:var(--red)}
+.cardTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.cardSub{font-size:9px;color:var(--text3);font-family:'Rajdhani',sans-serif;letter-spacing:.1em;font-weight:600}
+.cardInd{width:6px;height:6px;border-radius:50%;border:1px solid var(--border2);transition:all .15s}
+.indOn{background:var(--blue);border-color:var(--blue);box-shadow:var(--glow-blue)}
+.cardVal{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;margin-bottom:4px;letter-spacing:.02em}
+.cardName{font-size:11px;color:var(--text2)}
+.blue{color:var(--blue)}.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}.neutral{color:var(--text)}
+.breakdown{margin-top:11px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;animation:sd .18s ease}
+@keyframes sd{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.bdHdr{display:flex;justify-content:space-between;align-items:center;padding:11px 15px 9px;border-bottom:1px solid var(--border)}
+.bdTitle{font-size:12px;font-family:'Rajdhani',sans-serif;letter-spacing:.08em;font-weight:600;color:var(--text2)}
+.bdClose{color:var(--text3);cursor:pointer;font-size:14px;padding:2px 4px;transition:color .15s}
+.bdClose:hover{color:var(--text)}
+.bdRows{padding:7px 15px 13px}
+.bdRow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.bdRow:last-child{border:none}
+.bdRowLabel{color:var(--text2)}
+.bdRowVal{font-family:'Orbitron',monospace;font-size:11px;font-weight:700}
+.bdTotal{display:flex;justify-content:space-between;padding:9px 0 0;margin-top:4px;border-top:1px solid var(--border2);font-size:12px;font-weight:700;font-family:'Orbitron',monospace}
+.bdEmpty{font-size:12px;color:var(--text3);padding:8px 0;text-align:center}
