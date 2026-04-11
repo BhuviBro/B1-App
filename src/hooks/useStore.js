@@ -141,12 +141,46 @@ export function useStore(uid_user) {
     update(d => { d.recurring = (d.recurring || []).filter(r => r.id !== id); });
   }
 
-  function markRecurring(id, status) {
-    update(d => {
-      const r = (d.recurring || []).find(x => x.id === id);
-      if (r) { if (!r.history) r.history = {}; r.history[currentKey] = status; }
-    });
-  }
+function markRecurring(id, status) {
+  update(d => {
+    const r = (d.recurring || []).find(x => x.id === id);
+    if (!r) return;
+    if (!r.history) r.history = {};
+
+    const mo = getMonthWithCarryForward(d, currentKey);
+
+    if (status === 'paid') {
+      // Create debit entry
+      const entryId = uid();
+      r.history[currentKey] = 'paid';
+      r._entryId = r._entryId || {};
+      r._entryId[currentKey] = entryId;
+      mo.entries.push({
+        id: entryId,
+        label: r.label,
+        amount: r.amount,
+        type: 'debit',
+        category: r.category || 'other_d',
+        date: todayStr(),
+        time: nowTimeStr(),
+        returns: [],
+        isRecurringEntry: true,
+        recurringId: r.id,
+      });
+    } else if (status === null) {
+      // Undo — remove the auto-created debit entry if it exists
+      const entryId = r._entryId?.[currentKey];
+      if (entryId) {
+        mo.entries = mo.entries.filter(e => e.id !== entryId);
+        delete r._entryId[currentKey];
+      }
+      r.history[currentKey] = null;
+    } else {
+      // skipped
+      r.history[currentKey] = status;
+    }
+  });
+}
 
   function addRadarItem(item) {
     update(d => {
