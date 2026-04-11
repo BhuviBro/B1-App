@@ -14,11 +14,11 @@ export default function StatusPanel({ monthData, overall, data }) {
   const summary = calcSummary(monthData);
 
   const vals = {
-    overall:   overall,
-    income:    summary.income,
-    spent:     summary.spent,
-    remaining: overall,
-  };
+  overall:   overall,
+  income:    summary.income,
+  spent:     summary.spent,
+  remaining: summary.remaining,   // ← fix this line
+};
 
   function toggle(key) { setActive(a => a === key ? null : key); }
   const activeCard = CARDS.find(c => c.key === active);
@@ -96,16 +96,17 @@ function BreakdownContent({ type, monthData, summary, overall, data }) {
       </div>
     );
   }
-  if (type === 'remaining') {
-    return (
-      <div className={s.bdRows}>
-        <BdRow label="Overall balance" val={fmt(overall)} color="blue" />
-        <BdRow label="This month spent" val={fmt(summary.spent)} color="red" />
-        {summary.netLent > 0 && <BdRow label="Lent (pending)" val={fmt(summary.netLent)} color="amber" />}
-        <BdTotal label="Net Remaining" val={fmt(overall)} color={overall < 0 ? 'red' : 'neutral'} />
-      </div>
-    );
-  }
+ if (type === 'remaining') {
+  return (
+    <div className={s.bdRows}>
+      <BdRow label="Opening Balance"   val={fmt(monthData.basepower || 0)} color="blue" />
+      <BdRow label="Income this month" val={fmt(summary.income)}           color="green" />
+      <BdRow label="Spent this month"  val={fmt(summary.spent)}            color="red" />
+      {summary.netLent > 0 && <BdRow label="Lent (pending)" val={fmt(summary.netLent)} color="amber" />}
+      <BdTotal label="Net Remaining" val={fmt(summary.remaining)} color={summary.remaining < 0 ? 'red' : 'neutral'} />
+    </div>
+  );
+}
 }
 
 function BdRow({ label, val, color }) {

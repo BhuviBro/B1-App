@@ -62,27 +62,39 @@ export function useStore(uid_user) {
   }
 
   function addReturn(entryId, ret) {
-    update(d => {
-      const mo = getMonthWithCarryForward(d, currentKey);
-      const entry = mo.entries.find(x => x.id === entryId);
-      if (!entry) return;
-      if (!entry.returns) entry.returns = [];
-      entry.returns.push({ ...ret, id: uid() });
-      mo.entries.push({
-        id: uid(),
-        label: `Return — ${entry.label}${entry.person ? ` (${entry.person})` : ''}`,
-        amount: ret.amount,
-        type: 'credit',
-        category: 'received',
-        date: ret.date,
-        time: ret.time || nowTimeStr(),
-        subItems: [],
-        returns: [],
-        isReturnCredit: true,
-        linkedReturnableId: entryId,
-      });
+  update(d => {
+    // Find which month the returnable entry lives in
+    let targetKey = currentKey;
+    for (const [k, mo] of Object.entries(d.months || {})) {
+      if ((mo.entries || []).find(x => x.id === entryId)) {
+        targetKey = k;
+        break;
+      }
+    }
+    const mo = getMonthWithCarryForward(d, targetKey);
+    const entry = mo.entries.find(x => x.id === entryId);
+    if (!entry) return;
+    if (!entry.returns) entry.returns = [];
+    const retObj = { ...ret, id: uid() };
+    entry.returns.push(retObj);
+
+    // Always log the return credit in current month (where user is viewing)
+    const currentMo = getMonthWithCarryForward(d, currentKey);
+    currentMo.entries.push({
+      id: uid(),
+      label: `Return — ${entry.label}${entry.person ? ` (${entry.person})` : ''}`,
+      amount: ret.amount,
+      type: 'credit',
+      category: 'received',
+      date: ret.date,
+      time: ret.time || nowTimeStr(),
+      subItems: [],
+      returns: [],
+      isReturnCredit: true,
+      linkedReturnableId: entryId,
     });
-  }
+  });
+}
 
   function saveCategory(type, cat) {
     update(d => {
