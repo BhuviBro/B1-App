@@ -4,24 +4,24 @@ import { Icon } from './Icons';
 import s from './Returns.module.css';
 
 export default function Returns({ entries, onAddReturn, onEdit, onDelete, categories }) {
-  const [expanded, setExpanded]   = useState(null);
-  const [retSheet, setRetSheet]   = useState(null); // { entry, pending }
-  const [retAmt, setRetAmt]       = useState('');
-  const [retDate, setRetDate]     = useState(todayStr());
-  const [retTime, setRetTime]     = useState(nowTimeStr());
-  const [retNote, setRetNote]     = useState('');
+  const [expanded, setExpanded] = useState(null);
+  const [retSheet, setRetSheet] = useState(null); // { entry, pending }
+  const [retAmt, setRetAmt] = useState('');
+  const [retDate, setRetDate] = useState(todayStr());
+  const [retTime, setRetTime] = useState(nowTimeStr());
+  const [retNote, setRetNote] = useState('');
 
   const lentEntries = (entries || [])
     .filter(e => e.type === 'returnable')
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  const totalLent     = lentEntries.reduce((s, e) => s + e.amount, 0);
+  const totalLent = lentEntries.reduce((s, e) => s + e.amount, 0);
   const totalReturned = lentEntries.reduce((s, e) =>
     s + (e.returns || []).reduce((r, rv) => r + rv.amount, 0), 0);
 
   function openRetSheet(entry) {
     const returned = (entry.returns || []).reduce((s, r) => s + r.amount, 0);
-    const pending  = Math.max(0, entry.amount - returned);
+    const pending = Math.max(0, entry.amount - returned);
     setRetSheet({ entry, pending });
     setRetAmt(''); setRetDate(todayStr()); setRetTime(nowTimeStr()); setRetNote('');
   }
@@ -39,9 +39,13 @@ export default function Returns({ entries, onAddReturn, onEdit, onDelete, catego
 
   function logFull(entry) {
     const returned = (entry.returns || []).reduce((s, r) => s + r.amount, 0);
-    const pending  = Math.max(0, entry.amount - returned);
+    const pending = Math.max(0, entry.amount - returned);
     if (pending <= 0) return;
-    onAddReturn(entry.id, { amount: pending, date: todayStr(), time: nowTimeStr(), note: 'full return', id: uid() });
+    setRetSheet({ entry, pending });
+    setRetAmt(String(pending));
+    setRetDate(todayStr());
+    setRetTime(nowTimeStr());
+    setRetNote('full return');
   }
 
   if (!lentEntries.length) {
@@ -59,18 +63,18 @@ export default function Returns({ entries, onAddReturn, onEdit, onDelete, catego
     <div className={s.wrap}>
       {/* Summary cards */}
       <div className={s.sumCards}>
-        <div className={s.sumCard}><div className={s.sumVal} style={{color:'var(--amber)'}}>{fmt(totalLent)}</div><div className={s.sumLbl}>Total Lent</div></div>
-        <div className={s.sumCard}><div className={s.sumVal} style={{color:'var(--green)'}}>{fmt(totalReturned)}</div><div className={s.sumLbl}>Returned</div></div>
-        <div className={s.sumCard}><div className={s.sumVal} style={{color:totalLent-totalReturned>0?'var(--red)':'var(--green)'}}>{fmt(totalLent-totalReturned)}</div><div className={s.sumLbl}>Pending</div></div>
+        <div className={s.sumCard}><div className={s.sumVal} style={{ color: 'var(--amber)' }}>{fmt(totalLent)}</div><div className={s.sumLbl}>Total Lent</div></div>
+        <div className={s.sumCard}><div className={s.sumVal} style={{ color: 'var(--green)' }}>{fmt(totalReturned)}</div><div className={s.sumLbl}>Returned</div></div>
+        <div className={s.sumCard}><div className={s.sumVal} style={{ color: totalLent - totalReturned > 0 ? 'var(--red)' : 'var(--green)' }}>{fmt(totalLent - totalReturned)}</div><div className={s.sumLbl}>Pending</div></div>
       </div>
 
       <div className={s.sectionLabel}>LENT</div>
 
       {lentEntries.map(e => {
         const returned = (e.returns || []).reduce((s, r) => s + r.amount, 0);
-        const pending  = Math.max(0, e.amount - returned);
-        const settled  = pending <= 0;
-        const isExp    = expanded === e.id;
+        const pending = Math.max(0, e.amount - returned);
+        const settled = pending <= 0;
+        const isExp = expanded === e.id;
 
         return (
           <div key={e.id} className={`${s.card} ${isExp ? s.cardExp : ''}`}>
@@ -124,7 +128,7 @@ export default function Returns({ entries, onAddReturn, onEdit, onDelete, catego
                   <button className={s.iconBtn} onClick={() => onEdit(e)}>
                     <Icon name="edit" size={15} stroke="var(--text2)" />
                   </button>
-                  <button className={`${s.iconBtn} ${s.iconBtnDel}`} onClick={() => onDelete(e.id)}>
+                  <button className={`${s.iconBtn} ${s.iconBtnDel}`} onClick={() => onDelete(e.id, e.label)}>
                     <Icon name="trash" size={15} stroke="var(--red)" />
                   </button>
                 </div>

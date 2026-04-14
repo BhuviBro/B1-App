@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useStore } from './hooks/useStore';
-
 import StatusPanel from './components/StatusPanel';
 import Transactions from './components/Transactions';
 import AddEntry from './components/AddEntry';
@@ -19,8 +18,6 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 
 export default function App() {
   const { user, loading: authLoading, error: authError, signIn, signOut } = useAuth();
-
-  // Show loading screen while auth resolves
   if (authLoading) {
     return (
       <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)'}}>
@@ -28,41 +25,30 @@ export default function App() {
       </div>
     );
   }
-
-  // Show login if not signed in
-  if (!user) {
-    return <Login onSignIn={signIn} error={authError} loading={authLoading} />;
-  }
-
+  if (!user) return <Login onSignIn={signIn} error={authError} loading={authLoading} />;
   return <AppInner user={user} signOut={signOut} />;
 }
 
-// Separate component so useStore only runs when logged in
-// Replace the entire AppInner function in src/App.jsx with this:
-
-
-
 function AppInner({ user, signOut }) {
-  // ── ALL useState hooks MUST be before any early return ──
-  const [tab, setTab]                   = useState('command');
-  const [sheetOpen, setSheetOpen]       = useState(false);
-  const [editEntry_, setEditEntry_]     = useState(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [toast, setToast]               = useState('');
-  const [prefillEntry, setPrefillEntry] = useState(null);
+  const [tab, setTab]                     = useState('command');
+  const [sheetOpen, setSheetOpen]         = useState(false);
+  const [editEntry_, setEditEntry_]       = useState(null);
+  const [settingsOpen, setSettingsOpen]   = useState(false);
+  const [toast, setToast]                 = useState('');
+  const [prefillEntry, setPrefillEntry]   = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const store = useStore(user.uid);
-
   const {
     data, monthData, currentKey, changeMonth,
-    addEntry, editEntry, deleteEntry, setBasepower, addReturn,
+    addEntry, editEntry, setBasepower, addReturn,
+    trash, moveToTrash, restoreEntry, deleteEntryPermanent, clearTrash,
     categories, saveCategory, deleteCategory, reorderCategories,
     recurring, addRecurring, editRecurring, deleteRecurring, markRecurring,
     radar, addRadarItem, markRadarBought, discardRadarItem,
     theme, toggleTheme, syncing, ready,
   } = store;
 
-  // NOW safe to early return — all hooks already called above
   if (!ready) {
     return (
       <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'var(--bg)',gap:12}}>
@@ -77,38 +63,44 @@ function AppInner({ user, signOut }) {
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 2200); }
 
- function handleSave(entry) {
-  if (editEntry_) {
-    editEntry(editEntry_.id, entry);
-    showToast('Entry updated.');
-  } else {
-    addEntry(entry);
-    showToast('Entry saved.');
-    if (prefillEntry?.isRecurringPay && prefillEntry?.recurringId) {
-      markRecurring(prefillEntry.recurringId, 'paid');
+  function handleSave(entry) {
+    if (editEntry_) {
+      editEntry(editEntry_.id, entry);
+      showToast('Entry updated.');
+    } else {
+      addEntry(entry);
+      showToast('Entry saved.');
+      if (prefillEntry?.isRecurringPay && prefillEntry?.recurringId) {
+        markRecurring(prefillEntry.recurringId, 'paid');
+      }
     }
+    setEditEntry_(null);
+    setPrefillEntry(null);
   }
-  setEditEntry_(null);
-  setPrefillEntry(null);
-}
+
+  function handleDelete(id, label) {
+    setConfirmDelete({ id, label: label || 'this entry' });
+  }
+
+  function confirmDeleteEntry() {
+    if (!confirmDelete) return;
+    moveToTrash(confirmDelete.id);
+    showToast('Moved to trash.');
+    setConfirmDelete(null);
+  }
 
   function handleRadarBought(entry) { setPrefillEntry(entry); setSheetOpen(true); }
   function handleEdit(entry)        { setEditEntry_(entry); setSheetOpen(true); }
-  function handleDelete(id)         { deleteEntry(id); showToast('Entry deleted.'); }
   function handleRecurringPaid(rec) {
-  setEditEntry_(null);
-  setPrefillEntry({
-    amount: rec.amount,
-    type: 'debit',
-    label: rec.label,
-    category: rec.category || 'other_d',
-    date: todayStr(),
-    isRecurringPay: true,
-    recurringId: rec.id,
-  });
-  setSheetOpen(true);
-}
-  function openNew()                { setEditEntry_(null); setPrefillEntry(null); setSheetOpen(true); }
+    setEditEntry_(null);
+    setPrefillEntry({
+      amount: rec.amount, type: 'debit', label: rec.label,
+      category: rec.category || 'other_d', date: todayStr(),
+      isRecurringPay: true, recurringId: rec.id,
+    });
+    setSheetOpen(true);
+  }
+  function openNew() { setEditEntry_(null); setPrefillEntry(null); setSheetOpen(true); }
 
   const allEntries = monthData.entries || [];
   const overall    = calcOverallBalance(data);
@@ -156,15 +148,14 @@ function AppInner({ user, signOut }) {
         {tab === 'command' && (
           <>
             <StatusPanel monthData={monthData} overall={overall} data={data} />
-            
-             <Recurring recurring={recurring} currentKey={currentKey} onMark={(id, status) => {
-  if (status === 'paid') {
-    const rec = recurring.find(r => r.id === id);
-    if (rec) handleRecurringPaid(rec);
-  } else {
-    markRecurring(id, status);
-  }
-}} inline />
+            <Recurring recurring={recurring} currentKey={currentKey} onMark={(id, status) => {
+              if (status === 'paid') {
+                const rec = recurring.find(r => r.id === id);
+                if (rec) handleRecurringPaid(rec);
+              } else {
+                markRecurring(id, status);
+              }
+            }} inline />
             <div className={s.feedHeader}>
               <span className={s.feedLabel}>RECENT TRANSACTIONS</span>
               <div className={s.basepowerRow}>
@@ -195,7 +186,7 @@ function AppInner({ user, signOut }) {
           <Returns entries={allEntries} onAddReturn={addReturn} onEdit={handleEdit} onDelete={handleDelete} categories={categories} />
         )}
         {tab === 'charts' && <Charts data={data} currentKey={currentKey} categories={categories} />}
-        {tab === 'logs'   && <Logs data={data} categories={categories} />}
+        {tab === 'logs'   && <Logs data={data} categories={categories} onDelete={handleDelete} />}
       </div>
 
       <nav className={s.nav}>
@@ -237,14 +228,14 @@ function AppInner({ user, signOut }) {
         onAddRecurring={addRecurring}
         onEditRecurring={editRecurring}
         onDeleteRecurring={deleteRecurring}
-       onMarkRecurring={(id, status) => {
-  if (status === 'paid') {
-    const rec = recurring.find(r => r.id === id);
-    if (rec) { handleRecurringPaid(rec); setSettingsOpen(false); }
-  } else {
-    markRecurring(id, status);
-  }
-}}
+        onMarkRecurring={(id, status) => {
+          if (status === 'paid') {
+            const rec = recurring.find(r => r.id === id);
+            if (rec) { handleRecurringPaid(rec); setSettingsOpen(false); }
+          } else {
+            markRecurring(id, status);
+          }
+        }}
         radar={radar}
         onAddRadarItem={addRadarItem}
         onMarkRadarBought={markRadarBought}
@@ -253,7 +244,25 @@ function AppInner({ user, signOut }) {
         onOpenAddEntry={handleRadarBought}
         user={user}
         onSignOut={signOut}
+        trash={trash}
+        onRestoreEntry={restoreEntry}
+        onDeleteEntryPermanent={deleteEntryPermanent}
+        onClearTrash={clearTrash}
       />
+
+      {confirmDelete && (
+        <>
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:100}} onClick={() => setConfirmDelete(null)} />
+          <div style={{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:'480px',background:'var(--surface)',borderRadius:'20px 20px 0 0',padding:'24px 20px 36px',zIndex:101,display:'flex',flexDirection:'column',gap:16}}>
+            <div style={{fontSize:'16px',fontWeight:600,color:'var(--text)',fontFamily:'Rajdhani,sans-serif'}}>Delete Entry?</div>
+            <div style={{fontSize:'13px',color:'var(--text2)'}}>"{confirmDelete.label}" will be moved to trash. You can restore it from Settings.</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              <button onClick={() => setConfirmDelete(null)} style={{padding:'11px',borderRadius:'10px',border:'1px solid var(--border2)',background:'transparent',color:'var(--text2)',fontSize:'13px',cursor:'pointer'}}>Cancel</button>
+              <button onClick={confirmDeleteEntry} style={{padding:'11px',borderRadius:'10px',border:'none',background:'var(--red)',color:'#fff',fontSize:'13px',fontWeight:600,cursor:'pointer'}}>Move to Trash</button>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className={`${s.toast} ${toast ? s.toastShow : ''}`}>{toast}</div>
     </div>

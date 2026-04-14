@@ -6,8 +6,8 @@ import s from './Logs.module.css';
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const TYPE_LABEL = { credit: 'Credit', debit: 'Debit', returnable: 'Lent' };
 
-export default function Logs({ data, categories }) {
-  const [showFilters, setShowFilters]   = useState(false);
+export default function Logs({ data, categories, onDelete }) 
+{  const [showFilters, setShowFilters]   = useState(false);
   const [showCatSheet, setShowCatSheet] = useState(false);
   const [filterType, setFilterType]     = useState('all');
   const [filterCats, setFilterCats]     = useState([]); // multi-select array
@@ -186,13 +186,13 @@ export default function Logs({ data, categories }) {
           const mLabel = `${MONTHS[parseInt(m)-1]} ${y}`;
           const showHdr = mLabel !== lastMonth;
           lastMonth = mLabel;
-          return <LogRow key={e.id} e={e} showHdr={showHdr} mLabel={mLabel} categories={categories} s={s} />;
+          return <LogRow key={e.id} e={e} showHdr={showHdr} mLabel={mLabel} categories={categories} s={s} onDelete={onDelete} />;
         })}
       </div>
     </div>
   );
 }
-function LogRow({ e, showHdr, mLabel, categories, s }) {
+function LogRow({ e, showHdr, mLabel, categories, s, onDelete }) {
   const [open, setOpen] = useState(false);
   const catDef   = getCategoryDef(e.category, e.type, categories);
   const iconName = catDef?.icon || e.category || 'other';
@@ -218,6 +218,14 @@ function LogRow({ e, showHdr, mLabel, categories, s }) {
           </div>
         </div>
         <div className={`${s.rowAmt} ${s[color]}`}>{prefix}{fmt(e.amount)}</div>
+        {onDelete && (
+          <button
+            onClick={e2 => { e2.stopPropagation(); onDelete(e.id, e.label); }}
+            style={{background:'none',border:'none',cursor:'pointer',padding:'4px',opacity:0.5,flexShrink:0}}
+          >
+            <Icon name="trash" size={14} stroke="var(--red)" />
+          </button>
+        )}
       </div>
       {open && hasSubs && (
         <div className={s.subList}>

@@ -17,6 +17,8 @@ export default function Settings({
   radar = [], onAddRadarItem, onMarkRadarBought, onDiscardRadarItem,
   onReorderCategories,
   onOpenAddEntry,
+  trash = [], onRestoreEntry, onDeleteEntryPermanent, onClearTrash,
+  user, onSignOut,
 }) {
   const [section, setSection] = useState('recurring');
   const [catType, setCatType] = useState('debit');
@@ -263,7 +265,41 @@ export default function Settings({
                 )}
               </div>
 
-              <div className={s.settingRow}>
+             
+                {/* TRASH */}
+                <div className={s.radarSection} style={{ marginTop: 12 }}>
+                  <div className={s.secHdr}>
+                    <div>
+                      <span className={s.secLbl}>TRASH</span>
+                      <span className={s.radarSub}> · {trash.length} items</span>
+                    </div>
+                    {trash.length > 0 && (
+                      <button className={s.addBtn} style={{ borderColor: 'var(--red)', color: 'var(--red)' }} onClick={onClearTrash}>Clear All</button>
+                    )}
+                  </div>
+                  <p className={s.hint}>Deleted entries. Restore or permanently delete.</p>
+                  {trash.length === 0 && <div className={s.empty}>Trash is empty.</div>}
+                  {trash.length > 0 && (
+                    <div className={s.radarList}>
+                      {trash.map(item => (
+                        <div key={item.id} className={s.radarRow}>
+                          <div className={s.radarLeft}>
+                            <div className={s.radarName}>{item.label}</div>
+                            <div className={s.radarBoughtDate}>Deleted {item.deletedAt} · ₹{Math.round(item.amount).toLocaleString('en-IN')}</div>
+                          </div>
+                          <div className={s.radarActions}>
+                            <button className={s.btnBought} onClick={() => onRestoreEntry(item.id)}>Restore</button>
+                            <button className={s.btnDiscard} onClick={() => onDeleteEntryPermanent(item.id)}>
+                              <Icon name="trash" size={13} stroke="currentColor" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                //here itiis 
+                 <div className={s.settingRow}>
                 <div><div className={s.settingTitle}>Theme</div><div className={s.settingSub}>{theme === 'dark' ? 'Dark mode active' : 'Light mode active'}</div></div>
                 <div className={s.togWrap} onClick={onToggleTheme}>
                   <div className={`${s.togTrack} ${theme === 'light' ? s.togOn : ''}`}>
