@@ -141,7 +141,8 @@ export function calcOverallBalance(data) {
   Object.values(data.months || {}).forEach(m => {
     const e = m.entries || [];
     total += (m.basepower || 0);
-    total += e.filter(x => x.type === 'credit').reduce((s, x) => s + x.amount, 0);
+    // total += e.filter(x => x.type === 'credit').reduce((s, x) => s + x.amount, 0);
+    total += e.filter(x => x.type === 'credit' && !x.isReturnCredit).reduce((s, x) => s + x.amount, 0);
     total -= e.filter(x => x.type === 'debit').reduce((s, x) => s + x.amount, 0);
     const lent = e.filter(x => x.type === 'returnable').reduce((s, x) => s + x.amount, 0);
     const ret  = e.filter(x => x.type === 'returnable').reduce((s, x) =>
