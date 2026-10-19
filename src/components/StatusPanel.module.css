@@ -7,13 +7,15 @@
 .card_blue.cardActive{border-color:var(--blue)}
 .card_green.cardActive{border-color:var(--green)}
 .card_red.cardActive{border-color:var(--red)}
+.card_amber.cardActive{border-color:var(--amber)}
+.card_purple.cardActive{border-color:var(--purple)}
 .cardTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
 .cardSub{font-size:9px;color:var(--text3);font-family:'Rajdhani',sans-serif;letter-spacing:.1em;font-weight:600}
 .cardInd{width:6px;height:6px;border-radius:50%;border:1px solid var(--border2);transition:all .15s}
 .indOn{background:var(--blue);border-color:var(--blue);box-shadow:var(--glow-blue)}
 .cardVal{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;margin-bottom:4px;letter-spacing:.02em}
 .cardName{font-size:11px;color:var(--text2)}
-.blue{color:var(--blue)}.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}.neutral{color:var(--text)}
+.blue{color:var(--blue)}.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}.purple{color:var(--purple)}.neutral{color:var(--text)}
 .breakdown{margin-top:11px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;animation:sd .18s ease}
 @keyframes sd{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 .bdHdr{display:flex;justify-content:space-between;align-items:center;padding:11px 15px 9px;border-bottom:1px solid var(--border)}

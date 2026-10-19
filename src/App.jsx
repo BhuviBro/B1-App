@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useStore } from './hooks/useStore';
 import StatusPanel from './components/StatusPanel';
@@ -37,17 +37,37 @@ function AppInner({ user, signOut }) {
   const [toast, setToast]                 = useState('');
   const [prefillEntry, setPrefillEntry]   = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [activeProfileId, setActiveProfileId] = useState(() => localStorage.getItem('b1-profile') || 'personal');
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
-  const store = useStore(user.uid);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-profile', activeProfileId);
+    localStorage.setItem('b1-profile', activeProfileId);
+  }, [activeProfileId]);
+
+  const store = useStore(user.uid, activeProfileId);
   const {
     data, monthData, currentKey, changeMonth,
-    addEntry, editEntry, setBasepower, addReturn,
+    addEntry, editEntry, setBasepower, addReturn, addRepayment,
     trash, moveToTrash, restoreEntry, deleteEntryPermanent, clearTrash,
     categories, saveCategory, deleteCategory, reorderCategories,
     recurring, addRecurring, editRecurring, deleteRecurring, markRecurring,
     radar, addRadarItem, markRadarBought, discardRadarItem,
+    expected, addExpectedItem, editExpectedItem, deleteExpectedItem, markExpectedReceived,
     theme, toggleTheme, syncing, ready,
+    activeProfile, profiles,
+    partners, importSheetData,
   } = store;
+
+  function switchProfile(pid) {
+    if (pid === activeProfileId) {
+      setProfileMenuOpen(false);
+      return;
+    }
+    setActiveProfileId(pid);
+    setProfileMenuOpen(false);
+    showToast(`Switched to ${pid === 'business' ? 'Business' : 'Personal'}`);
+  }
 
   if (!ready) {
     return (
@@ -72,6 +92,9 @@ function AppInner({ user, signOut }) {
       showToast('Entry saved.');
       if (prefillEntry?.isRecurringPay && prefillEntry?.recurringId) {
         markRecurring(prefillEntry.recurringId, 'paid');
+      }
+      if (prefillEntry?.isExpectedReceived && prefillEntry?.expectedId) {
+        markExpectedReceived(prefillEntry.expectedId);
       }
     }
     setEditEntry_(null);
@@ -100,6 +123,22 @@ function AppInner({ user, signOut }) {
     });
     setSheetOpen(true);
   }
+
+  function handleExpectedReceived(item) {
+    setEditEntry_(null);
+    setPrefillEntry({
+      amount: item.amount,
+      type: 'credit',
+      label: item.label,
+      category: 'received',
+      person: item.person || '',
+      date: todayStr(),
+      isExpectedReceived: true,
+      expectedId: item.id,
+    });
+    setSheetOpen(true);
+  }
+
   function openNew() { setEditEntry_(null); setPrefillEntry(null); setSheetOpen(true); }
 
   const allEntries = monthData.entries || [];
@@ -111,7 +150,7 @@ function AppInner({ user, signOut }) {
     twoDaysAgo.setHours(0, 0, 0, 0);
     const cutoff = twoDaysAgo.toISOString().slice(0, 10);
     return allEntries
-      .filter(e => e.type !== 'returnable' && e.date >= cutoff)
+      .filter(e => e.type !== 'returnable' && e.type !== 'borrowed' && e.date >= cutoff)
       .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')))
       .slice(0, 10);
   })();
@@ -126,11 +165,42 @@ function AppInner({ user, signOut }) {
   return (
     <div className={s.app}>
       <div className={s.header}>
-        <button className={s.logoBtn} onClick={() => setSettingsOpen(true)}>
-          <span className={s.logo}>B1</span>
-          <span className={s.dotSep} />
-          <span className={s.headerSub}>KEEP IT SIMPLE</span>
-        </button>
+        <div className={s.headerLeft}>
+          <button className={s.logoBtn} onClick={() => setSettingsOpen(true)}>
+            <span className={s.logo}>B1</span>
+            <span className={s.dotSep} />
+            <span className={s.headerSub}>KEEP IT SIMPLE</span>
+          </button>
+
+          <div className={s.profilePillWrap}>
+            <button
+              className={s.profilePill}
+              onClick={() => setProfileMenuOpen(p => !p)}
+              title="Switch profile"
+            >
+              <span>{activeProfile?.name || 'Personal'}</span>
+              <span className={s.profileCaret} style={{ transform: profileMenuOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
+            </button>
+            {profileMenuOpen && (
+              <>
+                <div className={s.profileMenuOverlay} onClick={() => setProfileMenuOpen(false)} />
+                <div className={s.profileMenu}>
+                  {profiles.map(p => (
+                    <button
+                      key={p.id}
+                      className={`${s.profileMenuItem} ${p.id === activeProfileId ? s.profileMenuItemActive : ''}`}
+                      onClick={() => switchProfile(p.id)}
+                    >
+                      <span>{p.name}</span>
+                      {p.id === activeProfileId && <Icon name="check" size={12} stroke="currentColor" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
         <div className={s.headerRight}>
           {syncing && <span className={s.syncDot} title="Syncing…" />}
           <div className={s.cycleNav}>
@@ -175,7 +245,7 @@ function AppInner({ user, signOut }) {
               </div>
             </div>
             <Transactions entries={recentEntries} onEdit={handleEdit} onDelete={handleDelete} categories={categories} />
-            {allEntries.filter(e => e.type !== 'returnable').length > recentEntries.length && (
+            {allEntries.filter(e => e.type !== 'returnable' && e.type !== 'borrowed').length > recentEntries.length && (
               <div className={s.viewAllRow}>
                 <button className={s.viewAllBtn} onClick={() => setTab('logs')}>View all transactions →</button>
               </div>
@@ -183,9 +253,46 @@ function AppInner({ user, signOut }) {
           </>
         )}
         {tab === 'returns' && (
-          <Returns entries={allEntries} onAddReturn={addReturn} onEdit={handleEdit} onDelete={handleDelete} categories={categories} />
+          <Returns
+            entries={allEntries}
+            onAddReturn={addReturn}
+            onAddRepayment={addRepayment}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            categories={categories}
+            recurring={recurring}
+            currentKey={currentKey}
+            onAddRecurring={addRecurring}
+            onEditRecurring={editRecurring}
+            onDeleteRecurring={deleteRecurring}
+            onMarkRecurring={(id, status) => {
+              if (status === 'paid') {
+                const rec = recurring.find(r => r.id === id);
+                if (rec) handleRecurringPaid(rec);
+              } else {
+                markRecurring(id, status);
+              }
+            }}
+            expected={expected}
+            onAddExpected={addExpectedItem}
+            onEditExpected={editExpectedItem}
+            onDeleteExpected={deleteExpectedItem}
+            onMarkExpectedReceived={handleExpectedReceived}
+          />
         )}
-        {tab === 'charts' && <Charts data={data} currentKey={currentKey} categories={categories} />}
+        {tab === 'charts' && (
+          <Charts
+            data={data}
+            currentKey={currentKey}
+            categories={categories}
+            isBusiness={activeProfileId === 'business'}
+            partners={partners}
+            onImportSheetData={() => {
+              importSheetData();
+              showToast('Financial sheet data imported to Business!');
+            }}
+          />
+        )}
         {tab === 'logs'   && <Logs data={data} categories={categories} onDelete={handleDelete} />}
       </div>
 
@@ -218,24 +325,14 @@ function AppInner({ user, signOut }) {
       <Settings
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+        activeProfile={activeProfile}
+        profiles={profiles}
+        onSwitchProfile={switchProfile}
         categories={categories}
         onSaveCategory={saveCategory}
         onDeleteCategory={deleteCategory}
         theme={theme}
         onToggleTheme={toggleTheme}
-        recurring={recurring}
-        currentKey={currentKey}
-        onAddRecurring={addRecurring}
-        onEditRecurring={editRecurring}
-        onDeleteRecurring={deleteRecurring}
-        onMarkRecurring={(id, status) => {
-          if (status === 'paid') {
-            const rec = recurring.find(r => r.id === id);
-            if (rec) { handleRecurringPaid(rec); setSettingsOpen(false); }
-          } else {
-            markRecurring(id, status);
-          }
-        }}
         radar={radar}
         onAddRadarItem={addRadarItem}
         onMarkRadarBought={markRadarBought}
@@ -248,6 +345,10 @@ function AppInner({ user, signOut }) {
         onRestoreEntry={restoreEntry}
         onDeleteEntryPermanent={deleteEntryPermanent}
         onClearTrash={clearTrash}
+        onImportSheetData={() => {
+          importSheetData();
+          showToast('Financial sheet data imported to Business!');
+        }}
       />
 
       {confirmDelete && (

@@ -19,7 +19,8 @@
 .tagGreen{color:var(--green);background:var(--green-bg)}
 .tagRed{color:var(--red);background:var(--red-bg)}
 .tagAmber{color:var(--amber);background:var(--amber-bg)}
-.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}
+.tagPurple{color:var(--purple);background:var(--purple-bg)}
+.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}.purple{color:var(--purple)}
 .expandPanel{border-top:1px solid var(--border);padding:11px 13px;display:flex;flex-direction:column;gap:10px;animation:fi .15s ease}
 @keyframes fi{from{opacity:0}to{opacity:1}}
 .subTitle{font-size:10px;color:var(--text3);font-family:'Rajdhani',sans-serif;letter-spacing:.12em;font-weight:600;margin-bottom:3px}

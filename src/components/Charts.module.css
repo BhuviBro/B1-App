@@ -138,3 +138,240 @@
 .catIcGlow{transition:filter .2s}
 .cat-row:hover .catIcGlow{filter:drop-shadow(var(--glow-blue))}
 .catAmt{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:.02em}
+
+/* BUSINESS OVERVIEW & KPIS */
+.bizHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+.bizTitle {
+  font-size: 12px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--blue);
+  text-transform: uppercase;
+}
+.syncSheetBtn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-size: 11px;
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.syncSheetBtn:hover {
+  border-color: var(--blue);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.kpiCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+  overflow: hidden;
+}
+.kpiCard::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+}
+.kpiRevenue::after { background: var(--green); }
+.kpiExpense::after { background: var(--red); }
+.kpiProfit::after { background: var(--blue); }
+.kpiMargin::after { background: var(--amber); }
+
+.kpiLbl {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.kpiVal {
+  font-family: 'Orbitron', monospace;
+  font-size: 15px;
+  font-weight: 700;
+}
+.kpiValGreen { color: var(--green); }
+.kpiValRed { color: var(--red); }
+.kpiValBlue { color: var(--blue); }
+.kpiValAmber { color: var(--amber); }
+
+.kpiSub {
+  font-size: 10px;
+  color: var(--text3);
+}
+
+/* INCOME / INFLOW BARS */
+.catBarFillInflow {
+  height: 100%;
+  background: var(--green);
+  border-radius: 99px;
+  opacity: 0.8;
+  transition: width 0.4s ease;
+}
+
+/* PARTNER PROFIT DISTRIBUTION */
+.partnerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+.distProfitTag {
+  font-size: 11px;
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  color: var(--green);
+}
+.partnerDistBar {
+  width: 100%;
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 99px;
+  display: flex;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.partnerDistSeg {
+  height: 100%;
+  transition: width .4s ease;
+}
+
+.partnerList {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.partnerCard {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  transition: border-color .15s;
+}
+.partnerCard:hover {
+  border-color: var(--border2);
+}
+.partnerLeft {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.partnerDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.partnerInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.partnerName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.partnerShareTag {
+  font-size: 10px;
+  color: var(--text2);
+  font-family: 'DM Mono', monospace;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.partnerStatusSub {
+  font-size: 10px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+.partnerRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.partnerAmount {
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue);
+}
+.partnerAvailBadge {
+  font-size: 9px;
+  color: var(--green);
+  background: var(--green-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.partnerTotals {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.partnerTotalItem {
+  text-align: center;
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 6px 4px;
+}
+.partnerTotalVal {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.partnerTotalLbl {
+  font-size: 9px;
+  color: var(--text3);
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+

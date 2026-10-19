@@ -2,36 +2,29 @@ import { useState, useRef } from 'react';
 import ae from './AddEntry.module.css';
 import { uid, fmt, todayStr } from '../utils/storage';
 import { Icon } from './Icons';
-import Recurring from './Recurring';
 import s from './Settings.module.css';
 
-const TYPE_TABS = ['debit', 'credit', 'returnable'];
-const TYPE_LABEL = { debit: 'Debit', credit: 'Credit', returnable: 'Returnable' };
+const TYPE_TABS = ['debit', 'credit', 'returnable', 'borrowed'];
+const TYPE_LABEL = { debit: 'Debit', credit: 'Credit', returnable: 'Returnable', borrowed: 'Borrowed' };
 const SUGGESTED_ICONS = ['food', 'fuel', 'shopping', 'rent', 'medical', 'salary', 'received', 'travel', 'repayment', 'other'];
 
 export default function Settings({
   open, onClose,
+  activeProfile, profiles = [], onSwitchProfile,
   categories, onSaveCategory, onDeleteCategory,
   theme, onToggleTheme,
-  recurring, currentKey, onAddRecurring, onEditRecurring, onDeleteRecurring, onMarkRecurring,
   radar = [], onAddRadarItem, onMarkRadarBought, onDiscardRadarItem,
   onReorderCategories,
   onOpenAddEntry,
   trash = [], onRestoreEntry, onDeleteEntryPermanent, onClearTrash,
   user, onSignOut,
+  onImportSheetData,
 }) {
-  const [section, setSection] = useState('recurring');
+  const [section, setSection] = useState('categories');
   const [catType, setCatType] = useState('debit');
   const [catSheet, setCatSheet] = useState(null);
   const [catName, setCatName] = useState('');
   const [catIcon, setCatIcon] = useState('food');
-  const [recSheet, setRecSheet] = useState(null);
-  const [recLabel, setRecLabel] = useState('');
-  const [recAmt, setRecAmt] = useState('');
-  const [recDay, setRecDay] = useState('1');
-  const [recAlert, setRecAlert] = useState('5');
-  const [recCat, setRecCat] = useState('other_d');  // ← add here
-
 
   // Radar state
   const [showRadar, setShowRadar] = useState(false);
@@ -49,16 +42,6 @@ export default function Settings({
     if (!catName.trim()) return;
     onSaveCategory(catType, { id: catSheet.cat?.id || uid(), name: catName.trim(), icon: catIcon, type: catType });
     setCatSheet(null);
-  }
-
-  function openAddRec() { setRecLabel(''); setRecAmt(''); setRecDay('1'); setRecAlert('5'); setRecCat('other_d'); setRecSheet({ mode: 'add' }); }
-  function openEditRec(rec) { setRecLabel(rec.label); setRecAmt(String(rec.amount)); setRecDay(String(rec.dueDay)); setRecAlert(String(rec.alertDaysBefore ?? 5)); setRecCat(rec.category || 'other_d'); setRecSheet({ mode: 'edit', rec }); }
-  function saveRec() {
-    if (!recLabel.trim() || !(parseFloat(recAmt) > 0)) return;
-    const payload = { label: recLabel.trim(), amount: parseFloat(recAmt), dueDay: parseInt(recDay) || 1, alertDaysBefore: parseInt(recAlert) || 5, category: recCat };
-    if (recSheet.mode === 'edit') onEditRecurring(recSheet.rec.id, payload);
-    else onAddRecurring(payload);
-    setRecSheet(null);
   }
 
   // Drag handlers for category reorder
@@ -97,7 +80,6 @@ export default function Settings({
 
   function handleBought(item) {
     onMarkRadarBought(item.id);
-    // Open add entry pre-filled
     if (onOpenAddEntry) {
       onOpenAddEntry({ amount: item.price, type: 'debit', label: item.name, category: '', prefill: true });
     }
@@ -120,7 +102,7 @@ export default function Settings({
         </div>
 
         <div className={s.tabs}>
-          {['recurring', 'categories', 'profile'].map(sec => (
+          {['categories', 'profile'].map(sec => (
             <button key={sec} className={`${s.tab} ${section === sec ? s.tabActive : ''}`} onClick={() => setSection(sec)}>
               {sec.charAt(0).toUpperCase() + sec.slice(1)}
             </button>
@@ -128,19 +110,6 @@ export default function Settings({
         </div>
 
         <div className={s.body}>
-
-          {/* ── RECURRING ── */}
-          {section === 'recurring' && (
-            <>
-              <div className={s.secHdr}>
-                <span className={s.secLbl}>RECURRING PAYMENTS</span>
-                <button className={s.addBtn} onClick={openAddRec}>+ Add</button>
-              </div>
-              <p className={s.hint}>Alerts appear on Command 5 days before due.</p>
-              <Recurring recurring={recurring} currentKey={currentKey} onMark={onMarkRecurring} onEdit={openEditRec} onDelete={onDeleteRecurring} />
-            </>
-          )}
-
           {/* ── CATEGORIES ── */}
           {section === 'categories' && (
             <>
@@ -155,7 +124,7 @@ export default function Settings({
                 <span className={s.secLbl}>{TYPE_LABEL[catType].toUpperCase()} CATEGORIES</span>
                 <button className={s.addBtn} onClick={openAddCat}>+ Add</button>
               </div>
-              <p className={s.hint}>Hold and drag ≡ to reorder. Order reflects in Add Entry.</p>
+              <p className={s.hint}>Customizing {activeProfile?.name || 'Personal'} categories. Hold and drag ≡ to reorder.</p>
               <div className={s.catList}>
                 {(categories?.[catType] || []).map((cat, idx) => (
                   <div
@@ -195,12 +164,95 @@ export default function Settings({
           {section === 'profile' && (
             <>
               <div className={s.profileCard}>
-                <div className={s.avatar}>B1</div>
-                <div>
-                  <div className={s.pName}>Your Profile</div>
-                  <div className={s.pSub}>Local · No login required</div>
+                <div className={s.avatar}>
+                  {user?.displayName ? user.displayName.slice(0, 2).toUpperCase() : 'B1'}
                 </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className={s.pName}>{user?.displayName || 'User Profile'}</div>
+                  <div className={s.pSub} style={{ wordBreak: 'break-all' }}>{user?.email || 'Signed in with Google'}</div>
+                </div>
+                {onSignOut && (
+                  <button className={s.signOutBtn} onClick={onSignOut}>Sign out</button>
+                )}
               </div>
+
+              {/* ACTIVE PROFILE SELECTOR */}
+              <div className={s.settingRow} style={{ marginTop: 12 }}>
+                <div>
+                  <div className={s.settingTitle}>Current Profile</div>
+                  <div className={s.settingSub}>
+                    {activeProfile?.id === 'business'
+                      ? 'Business Mode · Violet accent · Work categories'
+                      : 'Personal Mode · Cyan accent · Personal categories'}
+                  </div>
+                </div>
+                <span className={s.badge} style={{ color: 'var(--blue)', borderColor: 'var(--blue)' }}>
+                  {activeProfile?.name || 'Personal'}
+                </span>
+              </div>
+              {profiles.length > 1 && onSwitchProfile && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4, marginBottom: 8 }}>
+                  {profiles.map(p => {
+                    const isAct = p.id === activeProfile?.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => onSwitchProfile(p.id)}
+                        style={{
+                          padding: '9px 12px',
+                          borderRadius: '8px',
+                          border: isAct ? '1px solid var(--blue)' : '1px solid var(--border2)',
+                          background: isAct ? 'var(--blue-bg)' : 'var(--surface)',
+                          color: isAct ? 'var(--blue)' : 'var(--text2)',
+                          fontFamily: 'Rajdhani, sans-serif',
+                          fontWeight: 600,
+                          fontSize: '12px',
+                          letterSpacing: '.06em',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          transition: 'all .15s'
+                        }}
+                      >
+                        {isAct && <Icon name="check" size={13} stroke="currentColor" />}
+                        {p.name} Profile
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {activeProfile?.id === 'business' && onImportSheetData && (
+                <div style={{ marginTop: -2, marginBottom: 12 }}>
+                  <button
+                    type="button"
+                    onClick={onImportSheetData}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border2)',
+                      background: 'var(--surface2)',
+                      color: 'var(--blue)',
+                      fontFamily: 'Rajdhani, sans-serif',
+                      fontWeight: 600,
+                      fontSize: '12px',
+                      letterSpacing: '.06em',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 7,
+                      transition: 'all .15s'
+                    }}
+                  >
+                    <span>📊 Re-import October 2026 Financial Sheet</span>
+                  </button>
+                </div>
+              )}
 
               {/* RADAR */}
               <div className={s.radarSection}>
@@ -265,41 +317,40 @@ export default function Settings({
                 )}
               </div>
 
-             
-                {/* TRASH */}
-                <div className={s.radarSection} style={{ marginTop: 12 }}>
-                  <div className={s.secHdr}>
-                    <div>
-                      <span className={s.secLbl}>TRASH</span>
-                      <span className={s.radarSub}> · {trash.length} items</span>
-                    </div>
-                    {trash.length > 0 && (
-                      <button className={s.addBtn} style={{ borderColor: 'var(--red)', color: 'var(--red)' }} onClick={onClearTrash}>Clear All</button>
-                    )}
+              {/* TRASH */}
+              <div className={s.radarSection} style={{ marginTop: 12 }}>
+                <div className={s.secHdr}>
+                  <div>
+                    <span className={s.secLbl}>TRASH</span>
+                    <span className={s.radarSub}> · {trash.length} items</span>
                   </div>
-                  <p className={s.hint}>Deleted entries. Restore or permanently delete.</p>
-                  {trash.length === 0 && <div className={s.empty}>Trash is empty.</div>}
                   {trash.length > 0 && (
-                    <div className={s.radarList}>
-                      {trash.map(item => (
-                        <div key={item.id} className={s.radarRow}>
-                          <div className={s.radarLeft}>
-                            <div className={s.radarName}>{item.label}</div>
-                            <div className={s.radarBoughtDate}>Deleted {item.deletedAt} · ₹{Math.round(item.amount).toLocaleString('en-IN')}</div>
-                          </div>
-                          <div className={s.radarActions}>
-                            <button className={s.btnBought} onClick={() => onRestoreEntry(item.id)}>Restore</button>
-                            <button className={s.btnDiscard} onClick={() => onDeleteEntryPermanent(item.id)}>
-                              <Icon name="trash" size={13} stroke="currentColor" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <button className={s.addBtn} style={{ borderColor: 'var(--red)', color: 'var(--red)' }} onClick={onClearTrash}>Clear All</button>
                   )}
                 </div>
-                //here itiis 
-                 <div className={s.settingRow}>
+                <p className={s.hint}>Deleted entries. Restore or permanently delete.</p>
+                {trash.length === 0 && <div className={s.empty}>Trash is empty.</div>}
+                {trash.length > 0 && (
+                  <div className={s.radarList}>
+                    {trash.map(item => (
+                      <div key={item.id} className={s.radarRow}>
+                        <div className={s.radarLeft}>
+                          <div className={s.radarName}>{item.label}</div>
+                          <div className={s.radarBoughtDate}>Deleted {item.deletedAt} · ₹{Math.round(item.amount).toLocaleString('en-IN')}</div>
+                        </div>
+                        <div className={s.radarActions}>
+                          <button className={s.btnBought} onClick={() => onRestoreEntry(item.id)}>Restore</button>
+                          <button className={s.btnDiscard} onClick={() => onDeleteEntryPermanent(item.id)}>
+                            <Icon name="trash" size={13} stroke="currentColor" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className={s.settingRow}>
                 <div><div className={s.settingTitle}>Theme</div><div className={s.settingSub}>{theme === 'dark' ? 'Dark mode active' : 'Light mode active'}</div></div>
                 <div className={s.togWrap} onClick={onToggleTheme}>
                   <div className={`${s.togTrack} ${theme === 'light' ? s.togOn : ''}`}>
@@ -307,10 +358,12 @@ export default function Settings({
                   </div>
                 </div>
               </div>
+
               <div className={s.settingRow}>
-                <div><div className={s.settingTitle}>Data storage</div><div className={s.settingSub}>Saved locally in browser</div></div>
-                <span className={s.badge}>Local</span>
+                <div><div className={s.settingTitle}>Data storage</div><div className={s.settingSub}>Cloud Sync · Firebase Firestore</div></div>
+                <span className={s.badge}>Synced</span>
               </div>
+
               <div className={s.settingRow}>
                 <div><div className={s.settingTitle}>Version</div><div className={s.settingSub}>B1 · Keep It Simple</div></div>
                 <span className={s.badge}>v2.0</span>
@@ -377,60 +430,6 @@ export default function Settings({
             <div className={s.subFooter}>
               <button className={s.btnCancel} onClick={() => setCatSheet(null)}>Cancel</button>
               <button className={s.btnSave} onClick={saveCat} disabled={!catName.trim()}>Save</button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── RECURRING ADD/EDIT SHEET ── */}
-      {recSheet && (
-        <>
-          <div className={s.subOverlay} onClick={() => setRecSheet(null)} />
-          <div className={s.subSheet}>
-            <div className={s.handle} />
-            <div className={s.hdr}>
-              <span className={s.title}>{recSheet.mode === 'add' ? 'Add' : 'Edit'} Recurring</span>
-              <button className={s.closeBtn} onClick={() => setRecSheet(null)}>✕</button>
-            </div>
-            <div className={s.subBody}>
-              <div className={s.field}>
-                <label className={s.lbl}>Label</label>
-                <input className={s.input} value={recLabel} onChange={e => setRecLabel(e.target.value)} placeholder="e.g. Kredit Bee, Rent…" autoFocus />
-              </div>
-              <div className={s.row2}>
-                <div className={s.field}>
-                  <label className={s.lbl}>Amount ₹</label>
-                  <input className={`${s.input} ${s.mono}`} type="number" value={recAmt} onChange={e => setRecAmt(e.target.value)} placeholder="0" inputMode="decimal" />
-                </div>
-                <div className={s.field}>
-                  <label className={s.lbl}>Due Day</label>
-                  <input className={`${s.input} ${s.mono}`} type="number" min="1" max="31" value={recDay} onChange={e => setRecDay(e.target.value)} placeholder="1–31" inputMode="numeric" />
-                </div>
-              </div>
-              <div className={s.field}>
-                <label className={s.lbl}>Alert days before</label>
-                <input className={`${s.input} ${s.mono}`} type="number" min="1" max="15" value={recAlert} onChange={e => setRecAlert(e.target.value)} placeholder="5" inputMode="numeric" />
-                <span className={s.hint2}>Alert {recAlert || 5} days before day {recDay || 1} each month.</span>
-              </div>
-              <div className={s.field}>
-                <label className={s.lbl}>Category</label>
-                <div className={ae.catGrid} style={{ marginTop: '6px' }}>
-                  {(categories?.debit || []).map(cat => (
-                    <button
-                      key={cat.id}
-                      className={`${ae.catPill} ${recCat === cat.id ? ae.catSel : ''}`}
-                      onClick={() => setRecCat(cat.id)}
-                    >
-                      <Icon name={cat.icon || 'other'} size={13} stroke="currentColor" />
-                      <span>{cat.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className={s.subFooter}>
-              <button className={s.btnCancel} onClick={() => setRecSheet(null)}>Cancel</button>
-              <button className={s.btnSave} onClick={saveRec} disabled={!recLabel.trim() || !(parseFloat(recAmt) > 0)}>Save</button>
             </div>
           </div>
         </>

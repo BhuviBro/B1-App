@@ -4,7 +4,7 @@ import { Icon } from './Icons';
 import s from './Logs.module.css';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const TYPE_LABEL = { credit: 'Credit', debit: 'Debit', returnable: 'Lent' };
+const TYPE_LABEL = { credit: 'Credit', debit: 'Debit', returnable: 'Lent', borrowed: 'Borrowed' };
 
 export default function Logs({ data, categories, onDelete }) 
 {  const [showFilters, setShowFilters]   = useState(false);
@@ -33,7 +33,7 @@ export default function Logs({ data, categories, onDelete })
   // All categories from ALL types in categories prop
   const allAvailableCats = useMemo(() => {
     const list = [];
-    ['debit','credit','returnable'].forEach(type => {
+    ['debit','credit','returnable','borrowed'].forEach(type => {
       (categories?.[type] || []).forEach(c => {
         if (!list.find(x => x.id === c.id)) list.push({ ...c, type });
       });
@@ -99,9 +99,9 @@ export default function Logs({ data, categories, onDelete })
           <div className={s.fRow}>
             <div className={s.fLbl}>TYPE</div>
             <div className={s.fPills}>
-              {['all','credit','debit','returnable'].map(t => (
+              {['all','credit','debit','returnable','borrowed'].map(t => (
                 <button key={t} className={`${s.fpill} ${filterType === t ? s.fpillActive : ''}`} onClick={() => setFilterType(t)}>
-                  {t === 'all' ? 'All' : t === 'credit' ? 'Credit' : t === 'debit' ? 'Debit' : 'Lent'}
+                  {t === 'all' ? 'All' : t === 'credit' ? 'Credit' : t === 'debit' ? 'Debit' : t === 'returnable' ? 'Lent' : 'Borrowed'}
                 </button>
               ))}
             </div>
@@ -196,9 +196,9 @@ function LogRow({ e, showHdr, mLabel, categories, s, onDelete }) {
   const [open, setOpen] = useState(false);
   const catDef   = getCategoryDef(e.category, e.type, categories);
   const iconName = catDef?.icon || e.category || 'other';
-  const color    = e.type === 'credit' ? 'green' : e.type === 'debit' ? 'red' : 'amber';
-  const prefix   = e.type === 'credit' ? '+' : '−';
-  const tagCls   = e.type === 'credit' ? s.tagGreen : e.type === 'debit' ? s.tagRed : s.tagAmber;
+  const color    = e.type === 'credit' ? 'green' : e.type === 'debit' ? 'red' : e.type === 'borrowed' ? 'purple' : 'amber';
+  const prefix   = (e.type === 'credit' || e.type === 'borrowed') ? '+' : '−';
+  const tagCls   = e.type === 'credit' ? s.tagGreen : e.type === 'debit' ? s.tagRed : e.type === 'borrowed' ? s.tagPurple : s.tagAmber;
   const hasSubs  = e.subItems?.length > 0;
 
   return (

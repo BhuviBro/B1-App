@@ -1,13 +1,29 @@
 .app{width:100%;max-width:480px;min-height:100vh;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;position:relative}
 
 /* HEADER */
-.header{padding:13px 18px 11px;display:flex;justify-content:space-between;align-items:center;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;position:sticky;top:0;z-index:10}
-.logoBtn{display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 8px;border-radius:var(--radius-sm);border:none;background:transparent;transition:background .15s}
+.header{padding:11px 16px;display:flex;justify-content:space-between;align-items:center;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;position:sticky;top:0;z-index:10}
+.headerLeft{display:flex;align-items:center;gap:9px}
+.logoBtn{display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;border-radius:var(--radius-sm);border:none;background:transparent;transition:background .15s}
 .logoBtn:hover{background:var(--surface)}
 .logo{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:600;color:var(--blue);letter-spacing:.06em;transition:filter .2s}
 .logoBtn:hover .logo{filter:drop-shadow(var(--glow-blue))}
 .dotSep{width:4px;height:4px;border-radius:50%;background:var(--text3)}
 .headerSub{font-size:9px;color:var(--text2);font-family:'Rajdhani',sans-serif;letter-spacing:.18em;font-weight:600}
+@media (max-width: 380px) { .headerSub, .dotSep { display: none; } }
+
+
+/* PROFILE SWITCHER PILL */
+.profilePillWrap{position:relative}
+.profilePill{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:10px;font-family:'Rajdhani',sans-serif;letter-spacing:.08em;font-weight:600;text-transform:uppercase;cursor:pointer;transition:all .15s}
+.profilePill:hover{border-color:var(--blue);background:var(--surface2)}
+.profileCaret{font-size:8px;color:var(--text3);transition:transform .15s}
+.profileMenu{position:absolute;top:calc(100% + 6px);left:0;min-width:130px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:4px;z-index:100;display:flex;flex-direction:column;gap:2px;animation:menuPop .15s ease}
+@keyframes menuPop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.profileMenuItem{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:6px;border:none;background:transparent;color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:all .12s;text-align:left;width:100%}
+.profileMenuItem:hover{background:var(--surface2);color:var(--text)}
+.profileMenuItemActive{background:var(--blue-bg);color:var(--blue);font-weight:600}
+.profileMenuOverlay{position:fixed;inset:0;z-index:90;background:transparent}
+
 .headerRight{display:flex;align-items:center;gap:8px}
 .cycleNav{display:flex;align-items:center;gap:7px}
 .cycleBtn{width:26px;height:26px;border-radius:50%;border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;line-height:1}

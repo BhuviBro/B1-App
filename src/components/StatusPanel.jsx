@@ -3,28 +3,22 @@ import { fmt, calcSummary } from '../utils/storage';
 import s from './StatusPanel.module.css';
 
 const CARDS = [
-  { key: 'balance', name: 'Balance',  sub: 'IN POCKET',   color: 'blue'    },
-  { key: 'spent',   name: 'Spent',    sub: 'THIS MONTH',  color: 'red'     },
-  { key: 'income',  name: 'Income',   sub: 'THIS MONTH',  color: 'green'   },
-  { key: 'lent',    name: 'Lent',     sub: 'PENDING',     color: 'amber'   },
+  { key: 'balance',  name: 'In Pocket', sub: 'IN POCKET',   color: 'blue'   },
+  { key: 'spent',    name: 'Spent',     sub: 'THIS MONTH',  color: 'red'    },
+  { key: 'lent',     name: 'Lent',      sub: 'PENDING',     color: 'amber'  },
+  { key: 'borrowed', name: 'Borrowed',  sub: 'PENDING',     color: 'purple' },
 ];
 
 export default function StatusPanel({ monthData, overall, data }) {
   const [active, setActive] = useState(null);
-const summary = calcSummary(monthData, data?.months);
+  const summary = calcSummary(monthData, data?.months);
 
-
-  // Income excludes return credits
-  const realIncome = (monthData.entries || [])
-    .filter(e => e.type === 'credit' && !e.isReturnCredit)
-    .reduce((s, e) => s + e.amount, 0);
-
- const vals = {
-  balance: overall,
-  spent:   summary.spent,
-  income:  realIncome,
-  lent:    summary.netLent,
-};
+  const vals = {
+    balance:  overall,
+    spent:    summary.spent,
+    lent:     summary.netLent,
+    borrowed: summary.netBorrowed,
+  };
 
   function toggle(key) { setActive(a => a === key ? null : key); }
   const activeCard = CARDS.find(c => c.key === active);
@@ -61,52 +55,64 @@ const summary = calcSummary(monthData, data?.months);
             <span className={s.bdTitle}>{activeCard.name} — Breakdown</span>
             <span className={s.bdClose} onClick={() => setActive(null)}>✕</span>
           </div>
-          <BreakdownContent type={active} monthData={monthData} summary={summary} realIncome={realIncome} data={data} />
+          <BreakdownContent type={active} monthData={monthData} summary={summary} overall={overall} data={data} />
         </div>
       )}
     </div>
   );
 }
 
-function BreakdownContent({ type, monthData, summary, realIncome, data }) {
+function BreakdownContent({ type, monthData, summary, overall, data }) {
   const entries = monthData.entries || [];
 
   if (type === 'balance') {
-    return (
-      <div className={s.bdRows}>
-        <BdRow label="Opening Balance"   val={fmt(monthData.basepower || 0)} color="blue" />
-        <BdRow label="Income this month" val={fmt(realIncome)}               color="green" />
-        <BdRow label="Spent this month"  val={fmt(summary.spent)}            color="red" />
-        {summary.netLent > 0 && <BdRow label="Lent (pending)" val={fmt(summary.netLent)} color="amber" />}
-        <BdTotal label="Balance" val={fmt(summary.remaining)} color={summary.remaining < 0 ? 'red' : 'blue'} />
-      </div>
-    );
-  }
+    let totalIncome = 0;
+    let totalSpent = 0;
+    let totalLentPending = 0;
+    let totalBorrowedPending = 0;
 
-  if (type === 'income') {
-    const credits = entries.filter(e => e.type === 'credit' && !e.isReturnCredit);
+    Object.values(data?.months || {}).forEach(m => {
+      const e = m.entries || [];
+      totalIncome += e.filter(x => x.type === 'credit' && !x.isReturnCredit).reduce((s, x) => s + x.amount, 0);
+      totalSpent += e.filter(x => x.type === 'debit' && !x.isBorrowRepayment).reduce((s, x) => s + x.amount, 0);
+      e.filter(x => x.type === 'returnable').forEach(x => {
+        const ret = (x.returns || []).reduce((r, rv) => r + rv.amount, 0);
+        totalLentPending += Math.max(0, x.amount - ret);
+      });
+      e.filter(x => x.type === 'borrowed').forEach(x => {
+        const rep = (x.returns || []).reduce((r, rv) => r + rv.amount, 0);
+        totalBorrowedPending += Math.max(0, x.amount - rep);
+      });
+    });
+
+    const opening = monthData.basepower || 0;
+
     return (
       <div className={s.bdRows}>
-        {!credits.length && <div className={s.bdEmpty}>No income this month</div>}
-        {credits.map(e => <BdRow key={e.id} label={e.label} val={fmt(e.amount)} color="green" />)}
-        {credits.length > 0 && <BdTotal label="Total Income" val={fmt(realIncome)} color="green" />}
+        <BdRow label="Opening Balance" val={fmt(opening)} color="blue" />
+        <BdRow label="Total Income" val={fmt(totalIncome)} color="green" />
+        <BdRow label="Total Spent" val={fmt(totalSpent)} color="red" />
+        {totalLentPending > 0 && <BdRow label="Lent (pending)" val={`−${fmt(totalLentPending)}`} color="amber" />}
+        {totalBorrowedPending > 0 && <BdRow label="Borrowed (pending)" val={`+${fmt(totalBorrowedPending)}`} color="purple" />}
+        <BdTotal label="In Pocket" val={fmt(overall)} color={overall < 0 ? 'red' : 'blue'} />
       </div>
     );
   }
 
   if (type === 'spent') {
-    const debits = entries.filter(e => e.type === 'debit' && !e.isRecurringEntry);
-    const recurring = entries.filter(e => e.type === 'debit' && e.isRecurringEntry);
+    const debits = entries.filter(e => e.type === 'debit' && !e.isRecurringEntry && !e.isBorrowRepayment);
+    const recurring = entries.filter(e => e.type === 'debit' && e.isRecurringEntry && !e.isBorrowRepayment);
     return (
       <div className={s.bdRows}>
-        {!entries.filter(e => e.type === 'debit').length && <div className={s.bdEmpty}>Nothing spent this month</div>}
+        {!debits.length && !recurring.length && <div className={s.bdEmpty}>Nothing spent this month</div>}
         {debits.map(e => <BdRow key={e.id} label={e.label} val={fmt(e.amount)} color="red" />)}
         {recurring.map(e => <BdRow key={e.id} label={`↻ ${e.label}`} val={fmt(e.amount)} color="red" />)}
         <BdTotal label="Total Spent" val={fmt(summary.spent)} color="red" />
       </div>
     );
   }
-if (type === 'lent') {
+
+  if (type === 'lent') {
     const allLent = [];
     Object.values(data?.months || {}).forEach(mo => {
       (mo.entries || []).filter(e => e.type === 'returnable').forEach(e => {
@@ -118,12 +124,36 @@ if (type === 'lent') {
     return (
       <div className={s.bdRows}>
         {!allLent.length && <div className={s.bdEmpty}>No lent entries</div>}
-        {allLent.map(e => (
-          e.pending > 0
-            ? <BdRow key={e.id} label={e.label} val={fmt(e.pending)} color="amber" />
-            : <BdRow key={e.id} label={`${e.label} ✓`} val={fmt(e.amount)} color="green" />
-        ))}
+        {allLent.map(e => {
+          const name = e.person ? `${e.label} (${e.person})` : e.label;
+          return e.pending > 0
+            ? <BdRow key={e.id} label={name} val={fmt(e.pending)} color="amber" />
+            : <BdRow key={e.id} label={`${name} ✓`} val={fmt(e.amount)} color="green" />;
+        })}
         <BdTotal label="Net Pending" val={fmt(summary.netLent)} color={summary.netLent > 0 ? 'amber' : 'green'} />
+      </div>
+    );
+  }
+
+  if (type === 'borrowed') {
+    const allBorrowed = [];
+    Object.values(data?.months || {}).forEach(mo => {
+      (mo.entries || []).filter(e => e.type === 'borrowed').forEach(e => {
+        const repaid = (e.returns || []).reduce((s, r) => s + r.amount, 0);
+        const pending = Math.max(0, e.amount - repaid);
+        allBorrowed.push({ ...e, pending, repaid });
+      });
+    });
+    return (
+      <div className={s.bdRows}>
+        {!allBorrowed.length && <div className={s.bdEmpty}>No borrowed entries</div>}
+        {allBorrowed.map(e => {
+          const name = e.person ? `${e.label} (${e.person})` : e.label;
+          return e.pending > 0
+            ? <BdRow key={e.id} label={name} val={fmt(e.pending)} color="purple" />
+            : <BdRow key={e.id} label={`${name} ✓`} val={fmt(e.amount)} color="green" />;
+        })}
+        <BdTotal label="Net Pending" val={fmt(summary.netBorrowed)} color={summary.netBorrowed > 0 ? 'purple' : 'green'} />
       </div>
     );
   }
@@ -137,6 +167,7 @@ function BdRow({ label, val, color }) {
     </div>
   );
 }
+
 function BdTotal({ label, val, color }) {
   return (
     <div className={s.bdTotal}>

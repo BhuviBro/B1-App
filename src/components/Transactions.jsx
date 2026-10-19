@@ -3,7 +3,7 @@ import { fmt, fmtDateTime, getCategoryDef } from '../utils/storage';
 import { Icon } from './Icons';
 import s from './Transactions.module.css';
 
-const TYPE_LABEL = { credit: 'Credit', debit: 'Debit', returnable: 'Lent' };
+const TYPE_LABEL = { credit: 'Credit', debit: 'Debit', returnable: 'Lent', borrowed: 'Borrowed' };
 
 export default function Transactions({ entries, onEdit, onDelete, categories }) {
   const [expanded, setExpanded] = useState(null);
@@ -27,9 +27,9 @@ export default function Transactions({ entries, onEdit, onDelete, categories }) 
         const catDef  = getCategoryDef(entry.category, entry.type, categories);
         const iconName = catDef?.icon || entry.category || 'other';
         const isExp    = expanded === entry.id;
-        const color    = entry.type === 'credit' ? 'green' : entry.type === 'debit' ? 'red' : 'amber';
-        const prefix   = entry.type === 'credit' ? '+' : '−';
-        const tagCls   = entry.type === 'credit' ? s.tagGreen : entry.type === 'debit' ? s.tagRed : s.tagAmber;
+        const color    = entry.type === 'credit' ? 'green' : entry.type === 'debit' ? 'red' : entry.type === 'borrowed' ? 'purple' : 'amber';
+        const prefix   = (entry.type === 'credit' || entry.type === 'borrowed') ? '+' : '−';
+        const tagCls   = entry.type === 'credit' ? s.tagGreen : entry.type === 'debit' ? s.tagRed : entry.type === 'borrowed' ? s.tagPurple : s.tagAmber;
 
         return (
           <div key={entry.id} className={`${s.entry} ${isExp ? s.entryExp : ''}`}>

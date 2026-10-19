@@ -64,9 +64,10 @@
 .tagGreen{color:var(--green);background:var(--green-bg)}
 .tagRed{color:var(--red);background:var(--red-bg)}
 .tagAmber{color:var(--amber);background:var(--amber-bg)}
+.tagPurple{color:var(--purple);background:var(--purple-bg)}
 .tagCat{font-size:9px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:0 5px}
 .rowAmt{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;flex-shrink:0;letter-spacing:.02em}
-.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}
+.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}.purple{color:var(--purple)}
 .rowClickable{cursor:pointer}
 .rowClickable:hover{background:var(--surface2)}
 .tagSub{font-size:9px;color:var(--blue);background:var(--blue-bg);padding:2px 6px;border-radius:99px;font-family:'Rajdhani',sans-serif;letter-spacing:.06em}

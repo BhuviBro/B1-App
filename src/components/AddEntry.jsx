@@ -104,13 +104,13 @@ function removeSub(i) {
         <div className={s.body}>
           {/* Type selector */}
           <div className={s.typeRow}>
-            {['debit','credit','returnable'].map(t => (
+            {['debit','credit','returnable','borrowed'].map(t => (
               <button
                 key={t}
                 className={`${s.typeBtn} ${type === t ? s['type_' + t] : ''}`}
                 onClick={() => setType(t)}
               >
-                {t === 'debit' ? 'Debit' : t === 'credit' ? 'Credit' : 'Lent'}
+                {t === 'debit' ? 'Debit' : t === 'credit' ? 'Credit' : t === 'returnable' ? 'Lent' : 'Borrowed'}
               </button>
             ))}
           </div>
@@ -142,8 +142,8 @@ function removeSub(i) {
             />
           </div>
 
-          {/* Person field for returnable */}
-          {type === 'returnable' && (
+          {/* Person field for returnable and borrowed */}
+          {(type === 'returnable' || type === 'borrowed') && (
             <div className={s.field}>
               <label className={s.lbl}>Person</label>
               <input
@@ -194,8 +194,8 @@ function removeSub(i) {
             </div>
           </div>
 
-          {/* Breakdown */}
-          {type !== 'returnable' && (
+          {/* Breakdown - only for debit and credit */}
+          {type !== 'returnable' && type !== 'borrowed' && (
             <div className={s.field}>
               <label className={s.lbl}>
                 Breakdown <span className={s.optional}>optional</span>
