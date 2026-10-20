@@ -23,7 +23,7 @@ export default function Recurring({ recurring, currentKey, onMark, inline, onAdd
               <div>
                 <div className={s.alertName}>{r.label}</div>
                 <div className={s.alertSub}>
-                  {r.status.isOverdue ? 'Overdue' : `Due on ${r.dueDay}`} · {fmt(r.amount)}
+                  {r.status.isOverdue ? 'Overdue' : `Due on ${r.dueDay}`} · {r.isLoan || r.totalBorrowed ? `EMI: ${fmt(r.amount)}` : fmt(r.amount)}
                 </div>
               </div>
             </div>
@@ -31,7 +31,7 @@ export default function Recurring({ recurring, currentKey, onMark, inline, onAdd
               className={s.markPaidBtn}
               onClick={() => onMark(r.id, 'paid')}
             >
-              Mark Paid
+              {r.isLoan || r.totalBorrowed ? 'Pay EMI' : 'Mark Paid'}
             </button>
           </div>
         ))}

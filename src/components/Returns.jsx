@@ -30,6 +30,7 @@ export default function Returns({
   onEditExpected,
   onDeleteExpected,
   onMarkExpectedReceived,
+  allMonthsData,
 }) {
   const [activeTab, setActiveTab] = useState('lent');
 
@@ -77,6 +78,7 @@ export default function Returns({
           onDeleteRecurring={onDeleteRecurring}
           onMarkRecurring={onMarkRecurring}
           categories={categories}
+          allMonthsData={allMonthsData}
         />
       )}
 

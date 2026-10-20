@@ -290,6 +290,9 @@ export function buildSmartLabel(label, categoryId, type, customCategories) {
   const catName = cat?.name || '';
   const trimmed = label?.trim() || '';
   if (!trimmed && catName) return catName;
-  if (trimmed && catName) return `${catName} — ${trimmed}`;
+  if (trimmed && catName) {
+    if (trimmed.toLowerCase().startsWith(catName.toLowerCase())) return trimmed;
+    return `${catName} — ${trimmed}`;
+  }
   return trimmed || catName || 'Entry';
 }

@@ -63,3 +63,10 @@
 .btnSaveActive{border-color:var(--blue);background:var(--blue);color:#fff;cursor:pointer;box-shadow:var(--glow-blue)}
 .btnSaveActive:hover{opacity:.92;box-shadow:var(--glow-blue),0 4px 20px rgba(74,158,255,.4)}
 .btnSaveActive:active{transform:scale(.98)}
+
+/* RECURRING / EMI PAYMENT NOTICE */
+.recurringNotice{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.28);border-radius:var(--radius-sm);padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.recurringNoticeHdr{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.recurringNoticeBadge{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--purple)}
+.recurringNoticeLabel{font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recurringNoticeSub{font-size:11px;color:var(--text2);line-height:1.4}

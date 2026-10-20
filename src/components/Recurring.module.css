@@ -193,3 +193,203 @@
   border-color: var(--blue);
   color: var(--text);
 }
+
+/* LOAN / EMI STYLES */
+.loanTag {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--purple-bg);
+  color: var(--purple);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.loanProgressBlock {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.loanProgressBar {
+  width: 100%;
+  height: 4px;
+  background: var(--surface2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.loanProgressFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.loanProgressMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: var(--text3);
+  font-family: 'DM Mono', monospace;
+}
+
+/* TYPE SELECTOR IN RECURRING SHEET */
+.typeSegment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: var(--bg2);
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.typeSegBtn {
+  padding: 8px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text2);
+  font-size: 11px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.typeSegBtn:hover {
+  color: var(--text);
+}
+
+.typeSegActive {
+  background: var(--surface2);
+  color: var(--blue);
+  border-color: var(--blue);
+  filter: drop-shadow(var(--glow-blue));
+}
+
+.typeSegActiveLoan {
+  background: var(--purple-bg);
+  color: var(--purple);
+  border-color: var(--purple);
+}
+
+.loanFormBox {
+  background: rgba(167, 139, 250, 0.05);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.loanHelper {
+  font-size: 9px;
+  color: var(--purple);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+}
+
+.loanNote {
+  font-size: 10px;
+  color: var(--text2);
+  line-height: 1.4;
+  padding: 4px 6px;
+  background: var(--surface2);
+  border-radius: 4px;
+}
+
+/* EXPANDED LOAN STATS & PAYMENT HISTORY */
+.loanStatsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.loanStat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.loanStatLbl {
+  font-size: 8px;
+  color: var(--text3);
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.loanStatVal {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.loanPaymentsLog {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.loanPaymentsTitle {
+  font-size: 9px;
+  color: var(--text3);
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.loanPaymentRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.loanPaymentDate {
+  color: var(--text2);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+}
+
+.loanPaymentAmt {
+  font-family: 'DM Mono', monospace;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alteredTag {
+  font-size: 9px;
+  font-family: 'Rajdhani', sans-serif;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--amber-bg);
+  color: var(--amber);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}

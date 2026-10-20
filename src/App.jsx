@@ -117,9 +117,16 @@ function AppInner({ user, signOut }) {
   function handleRecurringPaid(rec) {
     setEditEntry_(null);
     setPrefillEntry({
-      amount: rec.amount, type: 'debit', label: rec.label,
-      category: rec.category || 'other_d', date: todayStr(),
-      isRecurringPay: true, recurringId: rec.id,
+      amount: rec.amount,
+      type: 'debit',
+      label: rec.label,
+      category: rec.category || (rec.isLoan ? 'repayment' : 'other_d'),
+      date: todayStr(),
+      isRecurringPay: true,
+      recurringId: rec.id,
+      isLoan: !!(rec.isLoan || rec.totalBorrowed),
+      totalBorrowed: rec.totalBorrowed || null,
+      baseEmi: rec.amount,
     });
     setSheetOpen(true);
   }
@@ -278,6 +285,7 @@ function AppInner({ user, signOut }) {
             onEditExpected={editExpectedItem}
             onDeleteExpected={deleteExpectedItem}
             onMarkExpectedReceived={handleExpectedReceived}
+            allMonthsData={data?.months}
           />
         )}
         {tab === 'charts' && (

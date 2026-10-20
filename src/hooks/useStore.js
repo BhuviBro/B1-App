@@ -37,9 +37,18 @@ export function useStore(uid_user, activeProfileId = 'personal') {
   }
 
   function addEntry(entry) {
+    const newId = uid();
     update(d => {
-      getMonthWithCarryForward(d, currentKey).entries.push({ ...entry, id: uid(), returns: [] });
+      getMonthWithCarryForward(d, currentKey).entries.push({ ...entry, id: newId, returns: [] });
+      if (entry.recurringId) {
+        const r = (d.recurring || []).find(x => x.id === entry.recurringId);
+        if (r) {
+          if (!r._entryId) r._entryId = {};
+          r._entryId[currentKey] = newId;
+        }
+      }
     });
+    return newId;
   }
 
   function editEntry(id, entry) {
@@ -79,6 +88,17 @@ export function useStore(uid_user, activeProfileId = 'personal') {
               const borrowed = (mo2.entries || []).find(e => e.id === entry.linkedBorrowedId);
               if (borrowed) {
                 borrowed.returns = (borrowed.returns || []).filter(r => r.amount !== entry.amount);
+              }
+            }
+          }
+          // if deleting a recurring payment entry, remove its link and unmark history if no others remain this month
+          if (entry.recurringId) {
+            const r = (d.recurring || []).find(x => x.id === entry.recurringId);
+            if (r && r.history) {
+              const hasOther = (mo.entries || []).some(e => e.id !== id && e.recurringId === entry.recurringId);
+              if (!hasOther) {
+                r.history[foundMonthKey] = null;
+                if (r._entryId) delete r._entryId[foundMonthKey];
               }
             }
           }
@@ -237,10 +257,12 @@ export function useStore(uid_user, activeProfileId = 'personal') {
       if (!r.history) r.history = {};
       if (status === null) {
         const entryId = r._entryId?.[currentKey];
+        const mo = getMonthWithCarryForward(d, currentKey);
         if (entryId) {
-          const mo = getMonthWithCarryForward(d, currentKey);
           mo.entries = mo.entries.filter(e => e.id !== entryId);
           delete r._entryId[currentKey];
+        } else {
+          mo.entries = mo.entries.filter(e => e.recurringId !== id);
         }
         r.history[currentKey] = null;
       } else {

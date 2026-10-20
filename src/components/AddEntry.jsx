@@ -115,6 +115,21 @@ function removeSub(i) {
             ))}
           </div>
 
+          {/* Recurring / EMI notice */}
+          {editEntry?.isRecurringPay && (
+            <div className={s.recurringNotice}>
+              <div className={s.recurringNoticeHdr}>
+                <span className={s.recurringNoticeBadge}>
+                  {editEntry.isLoan ? '🏦 LOAN / EMI PAYMENT' : '🔄 RECURRING PAYMENT'}
+                </span>
+                <span className={s.recurringNoticeLabel}>{editEntry.label}</span>
+              </div>
+              <div className={s.recurringNoticeSub}>
+                Standard EMI: ₹{editEntry.baseEmi || editEntry.amount}. You can alter this amount for this payment below.
+              </div>
+            </div>
+          )}
+
           {/* AMOUNT — hero field at top */}
           <div className={s.amountHero}>
             <label className={s.amountLbl}>Amount ₹</label>
