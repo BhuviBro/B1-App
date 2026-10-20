@@ -56,7 +56,7 @@ function AppInner({ user, signOut }) {
     expected, addExpectedItem, editExpectedItem, deleteExpectedItem, markExpectedReceived,
     theme, toggleTheme, syncing, ready,
     activeProfile, profiles,
-    partners, importSheetData,
+    partners, importSheetData, clearProfileData,
   } = store;
 
   function switchProfile(pid) {
@@ -348,6 +348,10 @@ function AppInner({ user, signOut }) {
         onImportSheetData={() => {
           importSheetData();
           showToast('Financial sheet data imported to Business!');
+        }}
+        onClearProfileData={() => {
+          clearProfileData();
+          showToast(`${activeProfile?.name || 'Profile'} data cleared completely!`);
         }}
       />
 

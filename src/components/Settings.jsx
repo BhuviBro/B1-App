@@ -19,12 +19,14 @@ export default function Settings({
   trash = [], onRestoreEntry, onDeleteEntryPermanent, onClearTrash,
   user, onSignOut,
   onImportSheetData,
+  onClearProfileData,
 }) {
   const [section, setSection] = useState('categories');
   const [catType, setCatType] = useState('debit');
   const [catSheet, setCatSheet] = useState(null);
   const [catName, setCatName] = useState('');
   const [catIcon, setCatIcon] = useState('food');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Radar state
   const [showRadar, setShowRadar] = useState(false);
@@ -368,6 +370,33 @@ export default function Settings({
                 <div><div className={s.settingTitle}>Version</div><div className={s.settingSub}>B1 · Keep It Simple</div></div>
                 <span className={s.badge}>v2.0</span>
               </div>
+
+              <div className={s.settingRow} style={{ marginTop: 4 }}>
+                <div>
+                  <div className={s.settingTitle} style={{ color: 'var(--red)' }}>Reset Profile Data</div>
+                  <div className={s.settingSub}>
+                    Wipe all {activeProfile?.name || 'Personal'} entries, recurring, and balance
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(true)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--red)',
+                    background: 'var(--red-bg)',
+                    color: 'var(--red)',
+                    fontFamily: 'Rajdhani, sans-serif',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all .15s'
+                  }}
+                >
+                  Clear Data
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -430,6 +459,44 @@ export default function Settings({
             <div className={s.subFooter}>
               <button className={s.btnCancel} onClick={() => setCatSheet(null)}>Cancel</button>
               <button className={s.btnSave} onClick={saveCat} disabled={!catName.trim()}>Save</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── RESET PROFILE DATA CONFIRMATION MODAL ── */}
+      {showResetConfirm && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 120 }} onClick={() => setShowResetConfirm(false)} />
+          <div style={{
+            position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+            width: '100%', maxWidth: '480px', background: 'var(--surface)',
+            borderRadius: '20px 20px 0 0', padding: '24px 20px 36px', zIndex: 121,
+            display: 'flex', flexDirection: 'column', gap: 16
+          }}>
+            <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--red)', fontFamily: 'Rajdhani, sans-serif' }}>
+              Clear All {activeProfile?.name || 'Personal'} Data?
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.5 }}>
+              This will permanently delete all months, transactions, recurring items, and trash in your <strong>{activeProfile?.name || 'Personal'}</strong> profile.
+              {activeProfile?.id === 'personal' && ' Your Business profile will remain completely untouched.'}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4 }}>
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text)', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onClearProfileData?.();
+                  setShowResetConfirm(false);
+                }}
+                style={{ padding: '12px', borderRadius: '10px', border: 'none', background: 'var(--red)', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Yes, Clear Everything
+              </button>
             </div>
           </div>
         </>

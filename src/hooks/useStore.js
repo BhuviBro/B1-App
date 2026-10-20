@@ -319,6 +319,20 @@ export function useStore(uid_user, activeProfileId = 'personal') {
     });
   }
 
+  function clearProfileData() {
+    update(d => {
+      d.months = {};
+      d.recurring = [];
+      d.radar = [];
+      d.trash = [];
+      d.expected = [];
+      d.categories = currentProfile.id === 'business' ? DEFAULT_CATEGORIES_BUSINESS : DEFAULT_CATEGORIES;
+      if (currentProfile.id === 'business') {
+        d.partners = DEFAULT_BUSINESS_PARTNERS;
+      }
+    });
+  }
+
   return {
     data: safeData, monthData, currentKey, changeMonth, ready, syncing,
     addEntry, editEntry, deleteEntry, setBasepower, addReturn, addRepayment,
@@ -329,6 +343,6 @@ export function useStore(uid_user, activeProfileId = 'personal') {
     expected, addExpectedItem, editExpectedItem, deleteExpectedItem, markExpectedReceived,
     theme, toggleTheme,
     activeProfile: currentProfile, profiles: PROFILES,
-    partners, importSheetData,
+    partners, importSheetData, clearProfileData,
   };
 }
