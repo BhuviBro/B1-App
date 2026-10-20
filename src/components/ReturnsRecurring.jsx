@@ -68,6 +68,7 @@ export default function ReturnsRecurring({
 
       {items.map(r => {
         const { isPaid, isSkipped, isOverdue, isDueSoon } = r.status;
+        const isDue = (isDueSoon || isOverdue) && !isPaid && !isSkipped;
         const isExp = expanded === r.id;
 
         return (
@@ -83,7 +84,36 @@ export default function ReturnsRecurring({
                   {isSkipped && <span className={rs.tagSkipped}>Skipped</span>}
                 </div>
               </div>
-              <span className={rs.caret}>{isExp ? '▼' : '▶'}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {isDue && (
+                  <button
+                    className={rs.headActionBtnDue}
+                    onClick={(e) => { e.stopPropagation(); onMarkRecurring(r.id, 'paid'); }}
+                    title="Mark Paid"
+                  >
+                    Mark Paid
+                  </button>
+                )}
+                {!isDue && !isPaid && !isSkipped && (
+                  <button
+                    className={rs.headActionBtnPay}
+                    onClick={(e) => { e.stopPropagation(); onMarkRecurring(r.id, 'paid'); }}
+                    title="Add Payment"
+                  >
+                    Add Payment
+                  </button>
+                )}
+                {isPaid && (
+                  <button
+                    className={rs.headActionBtnAddMore}
+                    onClick={(e) => { e.stopPropagation(); onMarkRecurring(r.id, 'paid'); }}
+                    title="Add another payment"
+                  >
+                    + Add Payment
+                  </button>
+                )}
+                <span className={rs.caret}>{isExp ? '▼' : '▶'}</span>
+              </div>
             </div>
 
             {isExp && (
@@ -91,12 +121,39 @@ export default function ReturnsRecurring({
                 <div className={rs.recActions}>
                   {!isPaid && !isSkipped && (
                     <>
-                      <button className={rs.btnPaid} onClick={() => onMarkRecurring(r.id, 'paid')}>Mark Paid</button>
-                      <button className={rs.btnSkip} onClick={() => onMarkRecurring(r.id, 'skipped')}>Skip</button>
+                      {isDue ? (
+                        <button className={rs.btnPaid} onClick={() => onMarkRecurring(r.id, 'paid')}>
+                          Mark Paid
+                        </button>
+                      ) : (
+                        <button className={rs.btnAddPayment} onClick={() => onMarkRecurring(r.id, 'paid')}>
+                          Add Payment
+                        </button>
+                      )}
+                      <button className={rs.btnSkip} onClick={() => onMarkRecurring(r.id, 'skipped')}>
+                        Skip
+                      </button>
                     </>
                   )}
-                  {(isPaid || isSkipped) && (
-                    <button className={rs.btnUndo} onClick={() => onMarkRecurring(r.id, null)}>Undo</button>
+                  {isPaid && (
+                    <>
+                      <button className={rs.btnAddPayment} onClick={() => onMarkRecurring(r.id, 'paid')}>
+                        + Add Payment
+                      </button>
+                      <button className={rs.btnUndo} onClick={() => onMarkRecurring(r.id, null)}>
+                        Undo
+                      </button>
+                    </>
+                  )}
+                  {isSkipped && (
+                    <>
+                      <button className={rs.btnAddPayment} onClick={() => onMarkRecurring(r.id, 'paid')}>
+                        + Add Payment
+                      </button>
+                      <button className={rs.btnUndo} onClick={() => onMarkRecurring(r.id, null)}>
+                        Undo
+                      </button>
+                    </>
                   )}
                 </div>
                 <div className={rs.recActionsRow}>
