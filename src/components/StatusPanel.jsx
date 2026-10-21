@@ -9,7 +9,7 @@ const CARDS = [
   { key: 'borrowed', name: 'Borrowed',  sub: 'PENDING',     color: 'purple' },
 ];
 
-export default function StatusPanel({ monthData, overall, data }) {
+export default function StatusPanel({ monthData, overall, data, onSetBasepower }) {
   const [active, setActive] = useState(null);
   const summary = calcSummary(monthData, data?.months);
 
@@ -55,14 +55,23 @@ export default function StatusPanel({ monthData, overall, data }) {
             <span className={s.bdTitle}>{activeCard.name} — Breakdown</span>
             <span className={s.bdClose} onClick={() => setActive(null)}>✕</span>
           </div>
-          <BreakdownContent type={active} monthData={monthData} summary={summary} overall={overall} data={data} />
+          <BreakdownContent
+            type={active}
+            monthData={monthData}
+            summary={summary}
+            overall={overall}
+            data={data}
+            onSetBasepower={onSetBasepower}
+          />
         </div>
       )}
     </div>
   );
 }
 
-function BreakdownContent({ type, monthData, summary, overall, data }) {
+function BreakdownContent({ type, monthData, summary, overall, data, onSetBasepower }) {
+  const [adjusting, setAdjusting] = useState(false);
+  const [targetVal, setTargetVal] = useState('');
   const entries = monthData.entries || [];
 
   if (type === 'balance') {
@@ -87,6 +96,14 @@ function BreakdownContent({ type, monthData, summary, overall, data }) {
 
     const opening = monthData.basepower || 0;
 
+    function handleSaveAdjust() {
+      const target = parseFloat(targetVal);
+      if (isNaN(target)) return;
+      const neededOpening = Math.round(target - totalIncome + totalSpent + totalLentPending - totalBorrowedPending);
+      if (onSetBasepower) onSetBasepower(neededOpening);
+      setAdjusting(false);
+    }
+
     return (
       <div className={s.bdRows}>
         <BdRow label="Opening Balance" val={fmt(opening)} color="blue" />
@@ -95,6 +112,44 @@ function BreakdownContent({ type, monthData, summary, overall, data }) {
         {totalLentPending > 0 && <BdRow label="Lent (pending)" val={`−${fmt(totalLentPending)}`} color="amber" />}
         {totalBorrowedPending > 0 && <BdRow label="Borrowed (pending)" val={`+${fmt(totalBorrowedPending)}`} color="purple" />}
         <BdTotal label="In Pocket" val={fmt(overall)} color={overall < 0 ? 'red' : 'blue'} />
+
+        {onSetBasepower && (
+          <div className={s.adjustWrap}>
+            {!adjusting ? (
+              <button
+                className={s.adjustBtn}
+                onClick={() => { setAdjusting(true); setTargetVal(String(overall)); }}
+              >
+                <span>⚡ Set Current In-Pocket Balance</span>
+              </button>
+            ) : (
+              <div className={s.adjustForm}>
+                <div className={s.adjustHeader}>
+                  <span className={s.adjustTitle}>SET IN-POCKET BALANCE</span>
+                  <button className={s.adjustClose} onClick={() => setAdjusting(false)}>✕</button>
+                </div>
+                <div className={s.adjustInputRow}>
+                  <div className={s.adjustInputWrap}>
+                    <span className={s.adjustPrefix}>₹</span>
+                    <input
+                      className={s.adjustInput}
+                      type="number"
+                      value={targetVal}
+                      onChange={e => setTargetVal(e.target.value)}
+                      placeholder="e.g. 4372"
+                      inputMode="decimal"
+                      autoFocus
+                    />
+                  </div>
+                  <button className={s.adjustSaveBtn} onClick={handleSaveAdjust}>Apply</button>
+                </div>
+                <span className={s.adjustHint}>
+                  Auto-calculates required opening balance taking all your borrows, spending, and income into account.
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }

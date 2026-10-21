@@ -29,3 +29,21 @@
 .bdRowVal{font-family:'Orbitron',monospace;font-size:11px;font-weight:700}
 .bdTotal{display:flex;justify-content:space-between;padding:9px 0 0;margin-top:4px;border-top:1px solid var(--border2);font-size:12px;font-weight:700;font-family:'Orbitron',monospace}
 .bdEmpty{font-size:12px;color:var(--text3);padding:8px 0;text-align:center}
+
+/* ADJUST IN-POCKET BALANCE */
+.adjustWrap{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border2)}
+.adjustBtn{width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:var(--blue-bg);color:var(--blue);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;letter-spacing:.06em;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.adjustBtn:hover{filter:drop-shadow(var(--glow-blue))}
+.adjustForm{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.adjustHeader{display:flex;justify-content:space-between;align-items:center}
+.adjustTitle{font-size:9px;color:var(--text3);font-family:'Rajdhani',sans-serif;letter-spacing:.1em;font-weight:600}
+.adjustClose{background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:2px}
+.adjustClose:hover{color:var(--text)}
+.adjustInputRow{display:flex;gap:8px;align-items:center}
+.adjustInputWrap{flex:1;display:flex;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 8px}
+.adjustInputWrap:focus-within{border-color:var(--blue)}
+.adjustPrefix{font-family:'Orbitron',monospace;font-size:13px;color:var(--text3)}
+.adjustInput{flex:1;background:transparent;border:none;outline:none;padding:8px 6px;color:var(--text);font-family:'Orbitron',monospace;font-size:14px;font-weight:700}
+.adjustSaveBtn{padding:8px 14px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;letter-spacing:.05em;cursor:pointer;transition:all .15s;white-space:nowrap}
+.adjustSaveBtn:hover{filter:drop-shadow(var(--glow-blue))}
+.adjustHint{font-size:10px;color:var(--text3);line-height:1.3}

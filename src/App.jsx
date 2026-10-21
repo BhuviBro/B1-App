@@ -224,7 +224,7 @@ function AppInner({ user, signOut }) {
       <div className={s.content}>
         {tab === 'command' && (
           <>
-            <StatusPanel monthData={monthData} overall={overall} data={data} />
+            <StatusPanel monthData={monthData} overall={overall} data={data} onSetBasepower={setBasepower} />
             <Recurring recurring={recurring} currentKey={currentKey} onMark={(id, status) => {
               if (status === 'paid') {
                 const rec = recurring.find(r => r.id === id);
