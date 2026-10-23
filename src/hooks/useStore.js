@@ -5,6 +5,9 @@ import {
   monthKey, DEFAULT_CATEGORIES, DEFAULT_CATEGORIES_BUSINESS, DEFAULT_BUSINESS_PARTNERS,
   SHEET_ENTRIES_OCT_2026, mergeCategories, PROFILES, nowTimeStr, todayStr
 } from '../utils/storage';
+import {
+  fetchFromGoogleSheet, pushToGoogleSheet, normalizeSheetDate, parseSheetAmount, CATEGORY_MAP
+} from '../utils/googleSheetSync';
 
 const now = new Date();
 const INIT_KEY = monthKey(now.getFullYear(), now.getMonth() + 1);
@@ -89,6 +92,11 @@ export function useStore(uid_user, activeProfileId = 'personal') {
         }
       }
     });
+
+    if (activeProfileId === 'business' && sheetWebhookUrl) {
+      pushToGoogleSheet(sheetWebhookUrl, entry).catch(e => console.warn('Google Sheet push error:', e));
+    }
+
     return newId;
   }
 
@@ -397,6 +405,87 @@ export function useStore(uid_user, activeProfileId = 'personal') {
     });
   }
 
+  const [sheetSyncing, setSheetSyncing] = useState(false);
+  const [sheetWebhookUrl, setSheetWebhookUrlState] = useState(() => localStorage.getItem('b1-sheet-webhook-url') || '');
+
+  function setSheetWebhookUrl(url) {
+    const trimmed = (url || '').trim();
+    setSheetWebhookUrlState(trimmed);
+    localStorage.setItem('b1-sheet-webhook-url', trimmed);
+    update(d => {
+      d.sheetWebhookUrl = trimmed;
+    });
+  }
+
+  async function syncGoogleSheet(customUrl) {
+    const url = (customUrl !== undefined ? customUrl : sheetWebhookUrl)?.trim();
+    if (!url) {
+      importSheetData();
+      return { success: true, count: SHEET_ENTRIES_OCT_2026.length, isLive: false };
+    }
+
+    setSheetSyncing(true);
+    try {
+      const result = await fetchFromGoogleSheet(url);
+      const rawTx = result.transactions || [];
+      const partnersList = result.partners || [];
+
+      const mappedEntries = rawTx.map((tx, idx) => {
+        const { date, time } = normalizeSheetDate(tx.dateTime);
+        const amt = parseSheetAmount(tx.amount);
+        const type = String(tx.type || '').trim().toLowerCase() === 'credit' ? 'credit' : 'debit';
+        const rawCat = String(tx.category || '').trim().toLowerCase();
+        const catId = CATEGORY_MAP[rawCat] || (type === 'credit' ? 'sale' : 'other_d');
+
+        return {
+          id: `sh_live_${idx + 1}`,
+          type,
+          label: tx.description || (type === 'credit' ? 'Income' : 'Expense'),
+          amount: amt,
+          category: catId,
+          partner: tx.partner || '',
+          date,
+          time,
+          returns: [],
+        };
+      });
+
+      update(d => {
+        if (!d.months) d.months = {};
+        d.months['2026-10'] = {
+          basepower: 0,
+          entries: mappedEntries,
+        };
+
+        if (partnersList.length > 0) {
+          const colorMap = {
+            bhuvan: '#a78bfa',
+            kushal: '#38bdf8',
+            amulya: '#fbbf24',
+            deepika: '#f472b6',
+            anagha: '#34d399',
+          };
+          d.partners = partnersList.map(p => {
+            const id = p.name.toLowerCase().trim();
+            return {
+              id,
+              name: p.name,
+              sharePct: parseSheetAmount(p.sharePct),
+              withdrawn: parseSheetAmount(p.withdrawn),
+              allocated: parseSheetAmount(p.allocated),
+              available: parseSheetAmount(p.available),
+              color: colorMap[id] || '#60a5fa',
+            };
+          });
+        }
+      });
+
+      return { success: true, count: mappedEntries.length, isLive: true };
+    } finally {
+      setSheetSyncing(false);
+    }
+  }
+
   return {
     data: safeData, monthData, currentKey, changeMonth, ready, syncing,
     addEntry, editEntry, deleteEntry, setBasepower, addReturn, addRepayment,
@@ -408,5 +497,6 @@ export function useStore(uid_user, activeProfileId = 'personal') {
     theme, toggleTheme,
     activeProfile: currentProfile, profiles: PROFILES,
     partners, importSheetData, clearProfileData,
+    sheetWebhookUrl, setSheetWebhookUrl, syncGoogleSheet, sheetSyncing,
   };
 }

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import ae from './AddEntry.module.css';
 import { uid, fmt, todayStr } from '../utils/storage';
 import { Icon } from './Icons';
+import { APPS_SCRIPT_TEMPLATE } from '../utils/googleSheetSync';
 import s from './Settings.module.css';
 
 const TYPE_TABS = ['debit', 'credit', 'returnable', 'borrowed'];
@@ -20,6 +21,10 @@ export default function Settings({
   user, onSignOut,
   onImportSheetData,
   onClearProfileData,
+  sheetWebhookUrl = '',
+  onSetSheetWebhookUrl,
+  onSyncGoogleSheet,
+  sheetSyncing = false,
 }) {
   const [section, setSection] = useState('categories');
   const [catType, setCatType] = useState('debit');
@@ -27,6 +32,11 @@ export default function Settings({
   const [catName, setCatName] = useState('');
   const [catIcon, setCatIcon] = useState('food');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Google Sheet Webhook Sync state
+  const [webhookInput, setWebhookInput] = useState(sheetWebhookUrl || '');
+  const [showScriptBox, setShowScriptBox] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
 
   // Radar state
   const [showRadar, setShowRadar] = useState(false);
@@ -227,32 +237,88 @@ export default function Settings({
                 </div>
               )}
 
-              {activeProfile?.id === 'business' && onImportSheetData && (
-                <div style={{ marginTop: -2, marginBottom: 12 }}>
-                  <button
-                    type="button"
-                    onClick={onImportSheetData}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border2)',
-                      background: 'var(--surface2)',
-                      color: 'var(--blue)',
-                      fontFamily: 'Rajdhani, sans-serif',
-                      fontWeight: 600,
-                      fontSize: '12px',
-                      letterSpacing: '.06em',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 7,
-                      transition: 'all .15s'
-                    }}
-                  >
-                    <span>📊 Re-import October 2026 Financial Sheet</span>
-                  </button>
+              {activeProfile?.id === 'business' && (
+                <div style={{ marginTop: -2, marginBottom: 14 }}>
+                  <div className={s.sheetSyncCard}>
+                    <div className={s.sheetSyncHdr}>
+                      <span className={s.sheetSyncTitle}>
+                        <Icon name="charts" size={15} stroke="var(--blue)" />
+                        GOOGLE SHEET LIVE SYNC
+                      </span>
+                      <span className={`${s.sheetStatusPill} ${sheetWebhookUrl ? s.statusLive : s.statusSnapshot}`}>
+                        {sheetWebhookUrl ? '🟢 Live Webhook Active' : '⚡ Local Seeded Snapshot'}
+                      </span>
+                    </div>
+
+                    <div className={s.sheetUrlRow}>
+                      <input
+                        type="url"
+                        value={webhookInput}
+                        onChange={e => setWebhookInput(e.target.value)}
+                        placeholder="https://script.google.com/macros/s/.../exec"
+                        className={s.sheetUrlInput}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onSetSheetWebhookUrl && onSetSheetWebhookUrl(webhookInput.trim())}
+                        className={s.sheetUrlSaveBtn}
+                      >
+                        Save
+                      </button>
+                    </div>
+
+                    <div className={s.sheetActionRow}>
+                      <button
+                        type="button"
+                        disabled={sheetSyncing}
+                        onClick={async () => {
+                          if (onSyncGoogleSheet) {
+                            await onSyncGoogleSheet(webhookInput.trim());
+                          }
+                        }}
+                        className={s.syncNowBtn}
+                      >
+                        {sheetSyncing ? '⏳ Syncing…' : '🔄 Sync Live Now'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowScriptBox(v => !v)}
+                        className={s.showScriptBtn}
+                      >
+                        {showScriptBox ? 'Hide Script' : '⚡ Setup Script'}
+                      </button>
+                    </div>
+
+                    {showScriptBox && (
+                      <div className={s.scriptBox}>
+                        <div className={s.scriptInstructions}>
+                          <strong>Quick 3-Step Setup:</strong><br />
+                          1. In your Google Sheet, click <em>Extensions &gt; Apps Script</em>.<br />
+                          2. Paste the script below and click <strong>Save</strong> (💾).<br />
+                          3. Click <strong>Deploy &gt; New deployment</strong> &gt; Select <em>Web app</em>.<br />
+                          4. Set <em>Execute as: <strong>Me</strong></em> and <em>Who has access: <strong>Anyone</strong></em>.<br />
+                          5. Click <strong>Deploy</strong>, copy the Web App URL and paste it into the field above!
+                        </div>
+
+                        <pre className={s.scriptCode}>
+                          <code>{APPS_SCRIPT_TEMPLATE}</code>
+                        </pre>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(APPS_SCRIPT_TEMPLATE);
+                            setCopiedScript(true);
+                            setTimeout(() => setCopiedScript(false), 2000);
+                          }}
+                          className={s.copyScriptBtn}
+                        >
+                          {copiedScript ? '✓ Copied to Clipboard!' : '📋 Copy Apps Script Code'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

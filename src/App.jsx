@@ -57,6 +57,7 @@ function AppInner({ user, signOut }) {
     theme, toggleTheme, syncing, ready,
     activeProfile, profiles,
     partners, importSheetData, clearProfileData,
+    sheetWebhookUrl, setSheetWebhookUrl, syncGoogleSheet, sheetSyncing,
   } = store;
 
   function switchProfile(pid) {
@@ -295,10 +296,17 @@ function AppInner({ user, signOut }) {
             categories={categories}
             isBusiness={activeProfileId === 'business'}
             partners={partners}
-            onImportSheetData={() => {
-              importSheetData();
-              showToast('Financial sheet data imported to Business!');
+            onImportSheetData={async () => {
+              try {
+                showToast(sheetWebhookUrl ? 'Syncing with Google Sheet…' : 'Importing sheet data…');
+                const res = await syncGoogleSheet();
+                showToast(res.isLive ? `Live synced ${res.count} rows from Google Sheet!` : `Imported ${res.count} transactions!`);
+              } catch (err) {
+                showToast(`Sync failed: ${err.message || 'Check Webhook URL'}`);
+              }
             }}
+            sheetSyncing={sheetSyncing}
+            isLiveSync={!!sheetWebhookUrl}
           />
         )}
         {tab === 'logs'   && <Logs data={data} categories={categories} onDelete={handleDelete} />}
@@ -361,6 +369,10 @@ function AppInner({ user, signOut }) {
           clearProfileData();
           showToast(`${activeProfile?.name || 'Profile'} data cleared completely!`);
         }}
+        sheetWebhookUrl={sheetWebhookUrl}
+        onSetSheetWebhookUrl={setSheetWebhookUrl}
+        onSyncGoogleSheet={syncGoogleSheet}
+        sheetSyncing={sheetSyncing}
       />
 
       {confirmDelete && (

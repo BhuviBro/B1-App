@@ -15,7 +15,9 @@ export default function Charts({
   categories,
   isBusiness = false,
   partners = [],
-  onImportSheetData
+  onImportSheetData,
+  sheetSyncing = false,
+  isLiveSync = false,
 }) {
   const monthData = data.months?.[currentKey] || { basepower: 0, entries: [] };
   const summary = calcSummary(monthData);
@@ -110,8 +112,13 @@ export default function Charts({
               Financial Tracker Overview
             </span>
             {onImportSheetData && (
-              <button className={s.syncSheetBtn} onClick={onImportSheetData} title="Re-sync data from Google Sheet">
-                <span>🔄 Sync Sheet</span>
+              <button
+                className={s.syncSheetBtn}
+                onClick={onImportSheetData}
+                disabled={sheetSyncing}
+                title={isLiveSync ? "Sync live with Google Sheet" : "Re-sync data from Google Sheet"}
+              >
+                <span>{sheetSyncing ? '⏳ Syncing…' : isLiveSync ? '🟢 Live Sync' : '🔄 Sync Sheet'}</span>
               </button>
             )}
           </div>
