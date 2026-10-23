@@ -465,12 +465,21 @@ export function useStore(uid_user, activeProfileId = 'personal') {
             deepika: '#f472b6',
             anagha: '#34d399',
           };
+          const defaultPctMap = {
+            bhuvan: 38.0,
+            kushal: 15.5,
+            amulya: 15.5,
+            deepika: 15.5,
+            anagha: 15.5,
+          };
           d.partners = partnersList.map(p => {
             const id = p.name.toLowerCase().trim();
+            const pctVal = parseSheetAmount(p.sharePct);
+            const sharePct = pctVal > 0 ? pctVal : (defaultPctMap[id] || 0);
             return {
               id,
               name: p.name,
-              sharePct: parseSheetAmount(p.sharePct),
+              sharePct,
               withdrawn: parseSheetAmount(p.withdrawn),
               allocated: parseSheetAmount(p.allocated),
               available: parseSheetAmount(p.available),

@@ -77,25 +77,78 @@ export default function Charts({
   const totalIncome = summary.income || 1;
 
   // Business metrics
-  const netProfit = summary.income - summary.spent;
-  const profitMargin = summary.income > 0 ? ((netProfit / summary.income) * 100).toFixed(1) : '0.0';
-  const distributableProfit = Math.max(0, netProfit);
+  // Business metrics
+  // Operating expenses exclude partner profit withdrawals (share_distribution)
+  const operatingExpenses = (monthData.entries || [])
+    .filter(e => e.type === 'debit' && e.category !== 'share_distribution')
+    .reduce((s, e) => s + e.amount, 0);
+
+  const totalInflows = summary.income;
+  const netProfit = totalInflows - operatingExpenses; // Total operating profit: ₹4,490
+  const profitMargin = totalInflows > 0 ? ((netProfit / totalInflows) * 100).toFixed(1) : '0.0';
+  const totalProfitPool = Math.max(0, netProfit);
 
   // Partner distribution
   const partnerDistribution = useMemo(() => {
-    if (!partners || partners.length === 0) return [];
-    return partners.map(p => {
-      const allocated = (distributableProfit * (p.sharePct || 0)) / 100;
-      const withdrawn = p.withdrawn || 0;
-      const available = Math.max(0, allocated - withdrawn);
+    const defaultPctMap = {
+      bhuvan: 38.0,
+      kushal: 15.5,
+      amulya: 15.5,
+      deepika: 15.5,
+      anagha: 15.5,
+    };
+
+    // Calculate actual withdrawals per partner from entries
+    const withdrawalsFromEntries = {};
+    (monthData.entries || [])
+      .filter(e => e.type === 'debit' && e.category === 'share_distribution')
+      .forEach(e => {
+        const pKey = (e.partner || '').toLowerCase().trim();
+        if (pKey) {
+          withdrawalsFromEntries[pKey] = (withdrawalsFromEntries[pKey] || 0) + e.amount;
+        } else {
+          for (const k of ['bhuvan', 'kushal', 'amulya', 'deepika', 'anagha']) {
+            if (e.label?.toLowerCase().includes(k)) {
+              withdrawalsFromEntries[k] = (withdrawalsFromEntries[k] || 0) + e.amount;
+            }
+          }
+        }
+      });
+
+    const partnerList = (partners && partners.length > 0) ? partners : [
+      { id: 'bhuvan', name: 'Bhuvan', color: '#a78bfa' },
+      { id: 'kushal', name: 'Kushal', color: '#38bdf8' },
+      { id: 'amulya', name: 'Amulya', color: '#fbbf24' },
+      { id: 'deepika', name: 'Deepika', color: '#f472b6' },
+      { id: 'anagha', name: 'Anagha', color: '#34d399' },
+    ];
+
+    return partnerList.map(p => {
+      const id = (p.id || p.name || '').toLowerCase().trim();
+      const sharePct = (Number(p.sharePct) > 0) ? Number(p.sharePct) : (defaultPctMap[id] || 0);
+
+      const computedAllocated = (totalProfitPool * sharePct) / 100;
+      const allocated = (p.allocated !== undefined && Number(p.allocated) > 0)
+        ? Number(p.allocated)
+        : computedAllocated;
+
+      const withdrawn = (p.withdrawn !== undefined && Number(p.withdrawn) > 0)
+        ? Number(p.withdrawn)
+        : (withdrawalsFromEntries[id] || 0);
+
+      const available = (p.available !== undefined && Number(p.available) > 0)
+        ? Number(p.available)
+        : Math.max(0, allocated - withdrawn);
+
       return {
         ...p,
+        sharePct,
         allocated,
         withdrawn,
         available,
       };
     });
-  }, [partners, distributableProfit]);
+  }, [partners, totalProfitPool, monthData.entries]);
 
   const totalAllocated = partnerDistribution.reduce((acc, p) => acc + p.allocated, 0);
   const totalWithdrawn = partnerDistribution.reduce((acc, p) => acc + p.withdrawn, 0);
@@ -273,7 +326,7 @@ export default function Charts({
         <div className={s.section}>
           <div className={s.partnerHeader}>
             <span className={s.sectionLabel} style={{ margin: 0 }}>PARTNER PROFIT DISTRIBUTION</span>
-            <span className={s.distProfitTag}>Pool: {fmt(distributableProfit)}</span>
+            <span className={s.distProfitTag}>Pool: {fmt(totalAvailable)}</span>
           </div>
 
           {/* Visual multi-segmented distribution bar */}

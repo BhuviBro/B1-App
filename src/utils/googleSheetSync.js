@@ -195,6 +195,7 @@ function doGet(e) {
     // 3. Extract Partner Breakdown Table (Columns H-K)
     var partners = [];
     var partnerSummary = { totalProfit: 4490, totalWithdrawn: 1135, availableProfit: 3355 };
+    var pctMap = { "bhuvan": 38.0, "kushal": 15.5, "amulya": 15.5, "deepika": 15.5, "anagha": 15.5 };
 
     for (var r = 0; r < data.length; r++) {
       for (var c = 0; c < data[r].length; c++) {
@@ -217,6 +218,7 @@ function doGet(e) {
 
             partners.push({
               name: pName,
+              sharePct: pctMap[pName.toLowerCase()] || 0,
               allocated: alloc,
               withdrawn: withdr,
               available: avail
