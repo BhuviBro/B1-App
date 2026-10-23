@@ -23,46 +23,6 @@ export function useStore(uid_user, activeProfileId = 'personal') {
     localStorage.setItem('b1-theme', theme);
   }, [theme]);
 
-  // Auto-apply requested setup for October 2026: Spent (507 + 204 + 92) and In Pocket = 4372
-  useEffect(() => {
-    if (!ready || activeProfileId !== 'personal' || !data) return;
-    const setupKey = 'b1-setup-oct26-v1';
-    if (localStorage.getItem(setupKey) === 'true') return;
-
-    update(d => {
-      const mo = getMonthWithCarryForward(d, '2026-10');
-      const nonDebits = (mo.entries || []).filter(e => e.type !== 'debit');
-      const newDebits = [
-        { id: uid(), amount: 507, type: 'debit', label: 'Spent', category: 'other_d', date: todayStr(), time: '09:00', returns: [], subItems: [] },
-        { id: uid(), amount: 204, type: 'debit', label: 'Spent', category: 'other_d', date: todayStr(), time: '09:15', returns: [], subItems: [] },
-        { id: uid(), amount: 92,  type: 'debit', label: 'Spent', category: 'other_d', date: todayStr(), time: '09:30', returns: [], subItems: [] },
-      ];
-      mo.entries = [...nonDebits, ...newDebits];
-
-      let pendingBorrowed = 0;
-      let pendingLent = 0;
-      let totalIncome = 0;
-      (mo.entries || []).forEach(e => {
-        if (e.type === 'borrowed') {
-          const rep = (e.returns || []).reduce((r, rv) => r + rv.amount, 0);
-          pendingBorrowed += Math.max(0, e.amount - rep);
-        } else if (e.type === 'returnable') {
-          const ret = (e.returns || []).reduce((r, rv) => r + rv.amount, 0);
-          pendingLent += Math.max(0, e.amount - ret);
-        } else if (e.type === 'credit' && !e.isReturnCredit) {
-          totalIncome += e.amount;
-        }
-      });
-
-      const totalSpent = 803; // 507 + 204 + 92
-      const targetInPocket = 4372;
-      const neededOpening = Math.round(targetInPocket - totalIncome + totalSpent + pendingLent - pendingBorrowed);
-      mo.basepower = neededOpening;
-      mo.basepowerAutoFilled = false;
-    });
-
-    localStorage.setItem(setupKey, 'true');
-  }, [ready, activeProfileId, data]);
 
   const defCategories = currentProfile.id === 'business' ? DEFAULT_CATEGORIES_BUSINESS : DEFAULT_CATEGORIES;
   const safeData = data || { months: {}, categories: defCategories, partners: [], recurring: [], radar: [], trash: [], expected: [] };
@@ -391,7 +351,6 @@ export function useStore(uid_user, activeProfileId = 'personal') {
   }
 
   function clearProfileData() {
-    localStorage.removeItem('b1-setup-oct26-v1');
     update(d => {
       d.months = {};
       d.recurring = [];
