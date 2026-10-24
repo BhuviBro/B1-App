@@ -23,6 +23,117 @@ export function useStore(uid_user, activeProfileId = 'personal') {
     localStorage.setItem('b1-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__injectEMIs = () => {
+        update(d => {
+          if (!d.recurring) d.recurring = [];
+          if (!d.months) d.months = {};
+
+          const emi5236Id = 'rec_emi_5236';
+          const emi2094Id = 'rec_emi_2094';
+          const emi733Id  = 'rec_emi_733';
+
+          const existingIds = new Set(d.recurring.map(r => r.id));
+
+          if (!existingIds.has(emi5236Id)) {
+            d.recurring.push({
+              id: emi5236Id,
+              label: 'EMI — 5236',
+              amount: 5236,
+              dueDay: 5,
+              alertDaysBefore: 5,
+              category: 'repayment',
+              isLoan: true,
+              totalBorrowed: null,
+              tenureMonths: null,
+              history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
+            });
+          } else {
+            const r = d.recurring.find(x => x.id === emi5236Id);
+            r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
+          }
+
+          if (!existingIds.has(emi2094Id)) {
+            d.recurring.push({
+              id: emi2094Id,
+              label: 'EMI — 2094',
+              amount: 2094,
+              dueDay: 5,
+              alertDaysBefore: 5,
+              category: 'repayment',
+              isLoan: true,
+              totalBorrowed: null,
+              tenureMonths: null,
+              history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
+            });
+          } else {
+            const r = d.recurring.find(x => x.id === emi2094Id);
+            r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
+          }
+
+          if (!existingIds.has(emi733Id)) {
+            d.recurring.push({
+              id: emi733Id,
+              label: 'EMI — 733',
+              amount: 733,
+              dueDay: 5,
+              alertDaysBefore: 5,
+              category: 'repayment',
+              isLoan: true,
+              totalBorrowed: null,
+              tenureMonths: null,
+              history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
+            });
+          } else {
+            const r = d.recurring.find(x => x.id === emi733Id);
+            r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
+          }
+
+          if (!d.months['2026-09']) {
+            d.months['2026-09'] = { basepower: 0, entries: [] };
+          }
+          const sepEntries = d.months['2026-09'].entries || [];
+          const sepIds = new Set(sepEntries.map(e => e.id));
+
+          const newSepEntries = [
+            { id: 'emi_5236_sep05', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-09-05', time: '11:24', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
+            { id: 'emi_5236_sep09', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-09-09', time: '14:15', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
+            { id: 'emi_2094_sep09', amount: 2094, type: 'debit', label: 'EMI — 2094', category: 'repayment', date: '2026-09-09', time: '15:30', recurringId: emi2094Id, isRecurringEntry: true, returns: [] },
+            { id: 'emi_733_sep09',  amount: 733,  type: 'debit', label: 'EMI — 733',  category: 'repayment', date: '2026-09-09', time: '15:42', recurringId: emi733Id,  isRecurringEntry: true, returns: [] },
+          ];
+
+          for (const ent of newSepEntries) {
+            if (!sepIds.has(ent.id)) {
+              sepEntries.push(ent);
+            }
+          }
+          d.months['2026-09'].entries = sepEntries;
+
+          if (!d.months['2026-10']) {
+            d.months['2026-10'] = { basepower: 0, entries: [] };
+          }
+          const octEntries = d.months['2026-10'].entries || [];
+          const octIds = new Set(octEntries.map(e => e.id));
+
+          const newOctEntries = [
+            { id: 'emi_5236_oct20', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-10-20', time: '10:18', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
+            { id: 'emi_2094_oct20', amount: 2094, type: 'debit', label: 'EMI — 2094', category: 'repayment', date: '2026-10-20', time: '11:05', recurringId: emi2094Id, isRecurringEntry: true, returns: [] },
+            { id: 'emi_733_oct20',  amount: 733,  type: 'debit', label: 'EMI — 733',  category: 'repayment', date: '2026-10-20', time: '11:22', recurringId: emi733Id,  isRecurringEntry: true, returns: [] },
+          ];
+
+          for (const ent of newOctEntries) {
+            if (!octIds.has(ent.id)) {
+              octEntries.push(ent);
+            }
+          }
+          d.months['2026-10'].entries = octEntries;
+        });
+        return true;
+      };
+    }
+  }, [update]);
+
 
   const defCategories = currentProfile.id === 'business' ? DEFAULT_CATEGORIES_BUSINESS : DEFAULT_CATEGORIES;
   const safeData = data || { months: {}, categories: defCategories, partners: [], recurring: [], radar: [], trash: [], expected: [] };
@@ -53,8 +164,13 @@ export function useStore(uid_user, activeProfileId = 'personal') {
       }
     });
 
-    if (activeProfileId === 'business' && sheetWebhookUrl) {
-      pushToGoogleSheet(sheetWebhookUrl, entry).catch(e => console.warn('Google Sheet push error:', e));
+    const activeWebhook = sheetWebhookUrl || data?.sheetWebhookUrl;
+    if (activeProfileId === 'business' && activeWebhook) {
+      pushToGoogleSheet(activeWebhook, entry).then(ok => {
+        if (ok) {
+          syncGoogleSheet(activeWebhook).catch(() => {});
+        }
+      }).catch(e => console.warn('Google Sheet push error:', e));
     }
 
     return newId;
@@ -367,6 +483,14 @@ export function useStore(uid_user, activeProfileId = 'personal') {
   const [sheetSyncing, setSheetSyncing] = useState(false);
   const [sheetWebhookUrl, setSheetWebhookUrlState] = useState(() => localStorage.getItem('b1-sheet-webhook-url') || '');
 
+  // Re-hydrate webhook URL from Firestore cloud document if localStorage was wiped
+  useEffect(() => {
+    if (data?.sheetWebhookUrl && data.sheetWebhookUrl !== sheetWebhookUrl) {
+      setSheetWebhookUrlState(data.sheetWebhookUrl);
+      localStorage.setItem('b1-sheet-webhook-url', data.sheetWebhookUrl);
+    }
+  }, [data?.sheetWebhookUrl]);
+
   function setSheetWebhookUrl(url) {
     const trimmed = (url || '').trim();
     setSheetWebhookUrlState(trimmed);
@@ -376,8 +500,34 @@ export function useStore(uid_user, activeProfileId = 'personal') {
     });
   }
 
+  // Automatic Two-Way Sheet Pull:
+  // 1. Immediately on switching to Business profile
+  // 2. Automatically every 30 seconds
+  // 3. Automatically when switching back to the B1 browser tab from Google Sheets (window focus)
+  useEffect(() => {
+    if (activeProfileId !== 'business') return;
+    const url = sheetWebhookUrl || data?.sheetWebhookUrl;
+    if (!url) return;
+
+    syncGoogleSheet(url).catch(() => {});
+
+    const handleFocus = () => {
+      syncGoogleSheet(url).catch(() => {});
+    };
+    window.addEventListener('focus', handleFocus);
+
+    const interval = setInterval(() => {
+      syncGoogleSheet(url).catch(() => {});
+    }, 30000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [activeProfileId, sheetWebhookUrl, data?.sheetWebhookUrl]);
+
   async function syncGoogleSheet(customUrl) {
-    const url = (customUrl !== undefined ? customUrl : sheetWebhookUrl)?.trim();
+    const url = (customUrl !== undefined ? customUrl : (sheetWebhookUrl || data?.sheetWebhookUrl))?.trim();
     if (!url) {
       importSheetData();
       return { success: true, count: SHEET_ENTRIES_OCT_2026.length, isLive: false };
@@ -411,10 +561,23 @@ export function useStore(uid_user, activeProfileId = 'personal') {
 
       update(d => {
         if (!d.months) d.months = {};
-        d.months['2026-10'] = {
-          basepower: 0,
-          entries: mappedEntries,
-        };
+
+        // Group entries dynamically by month key
+        const byMonth = {};
+        mappedEntries.forEach(entry => {
+          const mKey = (entry.date && entry.date.slice(0, 7)) || '2026-10';
+          if (!byMonth[mKey]) byMonth[mKey] = [];
+          byMonth[mKey].push(entry);
+        });
+
+        if (!byMonth['2026-10']) byMonth['2026-10'] = [];
+
+        Object.entries(byMonth).forEach(([mKey, entries]) => {
+          d.months[mKey] = {
+            basepower: d.months[mKey]?.basepower || 0,
+            entries,
+          };
+        });
 
         if (partnersList.length > 0) {
           const colorMap = {

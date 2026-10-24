@@ -258,7 +258,8 @@ function doPost(e) {
 
     if (body.action === "add" && body.entry) {
       var entry = body.entry;
-      var vals = sheet.getRange("A1:B100").getValues();
+      var maxRows = Math.max(sheet.getLastRow(), 50);
+      var vals = sheet.getRange(1, 1, maxRows, 2).getValues();
       var lastRow = 4;
       for (var i = 4; i < vals.length; i++) {
         if (vals[i][0] || vals[i][1]) {
