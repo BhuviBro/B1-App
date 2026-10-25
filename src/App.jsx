@@ -304,7 +304,7 @@ function AppInner({ user, signOut }) {
             categories={categories}
             isBusiness={activeProfileId === 'business'}
             partners={partners}
-            onImportSheetData={async () => {
+            onImportSheetData={activeProfileId === 'business' ? async () => {
               try {
                 showToast(sheetWebhookUrl ? 'Syncing with Google Sheet…' : 'Importing sheet data…');
                 const res = await syncGoogleSheet();
@@ -312,9 +312,9 @@ function AppInner({ user, signOut }) {
               } catch (err) {
                 showToast(`Sync failed: ${err.message || 'Check Webhook URL'}`);
               }
-            }}
-            sheetSyncing={sheetSyncing}
-            isLiveSync={!!sheetWebhookUrl}
+            } : undefined}
+            sheetSyncing={activeProfileId === 'business' && sheetSyncing}
+            isLiveSync={activeProfileId === 'business' && !!sheetWebhookUrl}
           />
         )}
         {tab === 'logs'   && <Logs data={data} categories={categories} onDelete={handleDelete} />}

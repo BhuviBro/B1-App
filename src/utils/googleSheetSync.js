@@ -34,6 +34,13 @@ export function normalizeSheetDate(dateStr, timeStr) {
       if (parseInt(h, 10) < 24 && parseInt(m, 10) < 60) {
         parsedTime = `${h}:${m}`;
       }
+    } else {
+      const tObj = new Date(t);
+      if (!isNaN(tObj.getTime())) {
+        const hh = String(tObj.getHours()).padStart(2, '0');
+        const mm = String(tObj.getMinutes()).padStart(2, '0');
+        parsedTime = `${hh}:${mm}`;
+      }
     }
   }
 
@@ -54,6 +61,20 @@ export function normalizeSheetDate(dateStr, timeStr) {
         if (y.length > 4) y = '2026';
         parsedDate = `${y}-${m}-${d}`;
         if (!timeStr && dmyMatch[4]) parsedTime = dmyMatch[4];
+      } else {
+        // Pattern 3: Full JS Date string e.g. "Sun Oct 25 2026 00:00:00 GMT+0530"
+        const dObj = new Date(str);
+        if (!isNaN(dObj.getTime())) {
+          const y = dObj.getFullYear();
+          const m = String(dObj.getMonth() + 1).padStart(2, '0');
+          const d = String(dObj.getDate()).padStart(2, '0');
+          parsedDate = `${y}-${m}-${d}`;
+          if (!timeStr) {
+            const hh = String(dObj.getHours()).padStart(2, '0');
+            const mm = String(dObj.getMinutes()).padStart(2, '0');
+            if (hh !== '00' || mm !== '00') parsedTime = `${hh}:${mm}`;
+          }
+        }
       }
     }
   }
@@ -185,6 +206,33 @@ function convertFourDigitToTime(e) {
   }
 }
 
+function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+function formatCellDate(val) {
+  if (!val) return "";
+  if (Object.prototype.toString.call(val) === "[object Date]" || val instanceof Date) {
+    return val.getFullYear() + "-" + pad2(val.getMonth() + 1) + "-" + pad2(val.getDate());
+  }
+  return String(val).trim();
+}
+
+function formatCellTime(val) {
+  if (!val) return "";
+  if (Object.prototype.toString.call(val) === "[object Date]" || val instanceof Date) {
+    return pad2(val.getHours()) + ":" + pad2(val.getMinutes()) + ":" + pad2(val.getSeconds());
+  }
+  var s = String(val).trim();
+  if (!isNaN(s) && s.length >= 3 && s.length <= 4 && !s.includes(":")) {
+    var num = parseInt(s, 10);
+    var h = Math.floor(num / 100);
+    var m = num % 100;
+    if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+      return pad2(h) + ":" + pad2(m) + ":00";
+    }
+  }
+  return s;
+}
+
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -227,25 +275,26 @@ function doGet(e) {
     // 2. Extract Transactions
     var transactions = [];
     for (var r = headerRowIdx + 1; r < data.length; r++) {
-      var dVal = data[r][colDate];
-      var tVal = colTime !== -1 ? data[r][colTime] : "";
+      var rawD = data[r][colDate];
+      var rawT = colTime !== -1 ? data[r][colTime] : "";
       var descVal = data[r][colDesc];
       var amtVal = data[r][colAmt];
       var typeVal = data[r][colType];
       var catVal = data[r][colCat];
       var partnerVal = data[r][colPartner];
 
-      if (!dVal && !descVal && !amtVal) continue;
+      if (!rawD && !descVal && !amtVal) continue;
       if (!descVal && !amtVal) continue;
 
-      var fullDateTime = String(dVal || "");
-      if (tVal) fullDateTime += " " + String(tVal);
+      var dStr = formatCellDate(rawD);
+      var tStr = formatCellTime(rawT);
+      var fullDateTime = dStr + (tStr ? " " + tStr : "");
 
       transactions.push({
         row: r + 1,
         dateTime: fullDateTime,
-        date: String(dVal || ""),
-        time: String(tVal || ""),
+        date: dStr,
+        time: tStr,
         description: String(descVal || ""),
         amount: amtVal,
         type: String(typeVal || ""),

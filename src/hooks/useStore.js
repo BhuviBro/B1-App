@@ -3,7 +3,8 @@ import { useFirestore } from './useFirestore';
 import {
   getMonthWithCarryForward, uid, uid_radar,
   monthKey, DEFAULT_CATEGORIES, DEFAULT_CATEGORIES_BUSINESS, DEFAULT_BUSINESS_PARTNERS,
-  SHEET_ENTRIES_OCT_2026, mergeCategories, PROFILES, nowTimeStr, todayStr
+  SHEET_ENTRIES_OCT_2026, mergeCategories, PROFILES, nowTimeStr, todayStr,
+  PERSONAL_RECURRING_EMIS, PERSONAL_ENTRIES_OCT_2026, PERSONAL_ENTRIES_SEP_2026
 } from '../utils/storage';
 import {
   fetchFromGoogleSheet, pushToGoogleSheet, normalizeSheetDate, parseSheetAmount, CATEGORY_MAP
@@ -26,43 +27,35 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
     localStorage.setItem('b1-theme', theme);
   }, [theme]);
 
-  // One-time calibration of Personal balance to exact requested ₹2,694
+  // One-time restoration of all 34 Personal transactions, 3 EMIs, Slice category, and ₹2,694 calibrated balance
   useEffect(() => {
     if (!ready || activeProfileId !== 'personal' || !data) return;
-    const balanceCalibratedKey = '_balance_calibrated_oct25_2694';
-    if (data[balanceCalibratedKey]) return;
+    const restoreKey = '_personal_restored_34_entries_v3';
+    if (data[restoreKey]) return;
 
     update(d => {
-      d[balanceCalibratedKey] = true;
-      const mo = getMonthWithCarryForward(d, '2026-10');
-      const entries = mo.entries || [];
+      d[restoreKey] = true;
+      if (!d.months) d.months = {};
 
-      let income = 0;
-      let spent = 0;
-      let lent = 0;
-      let returned = 0;
-      let borrowed = 0;
-      let repaid = 0;
+      // 1. Restore all 26 October entries & set basepower to 608 (remaining = exactly ₹2,694)
+      d.months['2026-10'] = {
+        basepower: 608,
+        basepowerAutoFilled: false,
+        entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)),
+      };
 
-      entries.forEach(e => {
-        if (e.type === 'credit' && !e.isReturnCredit) income += e.amount;
-        else if (e.type === 'debit' && !e.isBorrowRepayment) spent += e.amount;
-        else if (e.type === 'returnable') {
-          lent += e.amount;
-          (e.returns || []).forEach(r => { returned += r.amount; });
-        } else if (e.type === 'borrowed') {
-          borrowed += e.amount;
-          (e.returns || []).forEach(r => { repaid += r.amount; });
-        }
-      });
+      // 2. Restore all 8 September entries
+      d.months['2026-09'] = {
+        basepower: 0,
+        basepowerAutoFilled: false,
+        entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)),
+      };
 
-      const netLent = Math.max(0, lent - returned);
-      const netBorrowed = Math.max(0, borrowed - repaid);
+      // 3. Restore all 3 EMIs (5236, 2094, 733) with full history (next target Dec 5)
+      d.recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
 
-      const targetRemaining = 2694;
-      const neededBasepower = Math.round(targetRemaining - income + spent + netLent - netBorrowed);
-      mo.basepower = Math.max(0, neededBasepower);
-      mo.basepowerAutoFilled = false;
+      // 4. Ensure categories include slice
+      d.categories = mergeCategories(d.categories, 'personal');
     });
   }, [ready, activeProfileId, data]);
 
@@ -403,6 +396,7 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
   }
 
   function importSheetData() {
+    if (activeProfileId !== 'business') return;
     update(d => {
       if (!d.months) d.months = {};
       const mo = d.months['2026-10'] || { basepower: 0, entries: [] };
@@ -485,6 +479,10 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
   }, [activeProfileId, sheetWebhookUrl, data?.sheetWebhookUrl]);
 
   async function syncGoogleSheet(customUrl) {
+    if (activeProfileId !== 'business') {
+      console.warn('Google Sheet sync aborted: active profile is not business');
+      return { success: false, count: 0, isLive: false };
+    }
     const url = (customUrl !== undefined ? customUrl : (sheetWebhookUrl || data?.sheetWebhookUrl))?.trim();
     if (!url) {
       const hasAnyEntries = Object.values(data?.months || {}).some(m => (m.entries || []).length > 0);
