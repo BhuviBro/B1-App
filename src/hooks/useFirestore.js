@@ -25,7 +25,7 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal', userEm
   const isOwner = normalizedEmail === 'bhuvibhuvan1624@gmail.com';
   const isWipedUser = normalizedEmail === 'bhuvan1624@gmail.com';
 
-  const cacheKey = docId === 'main' ? 'b1-v2' : `b1-v2-${docId}`;
+  const cacheKey = docId === 'main' ? `b1-v2-${uid}` : `b1-v2-${docId}-${uid}`;
   const defCategories = profileId === 'business' ? DEFAULT_CATEGORIES_BUSINESS : DEFAULT_CATEGORIES;
 
   function emptyData() {
@@ -73,9 +73,8 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal', userEm
       } catch (_) {}
     }
 
-    // Load cached data for this docId immediately so switching profiles is instant with no flicker
     try {
-      const cached = !isWipedUser ? localStorage.getItem(cacheKey) : null;
+      const cached = !isWipedUser ? (localStorage.getItem(cacheKey) || (isOwner && docId === 'main' ? localStorage.getItem('b1-v2') : null)) : null;
       if (cached) {
         setData(JSON.parse(cached));
         setReady(true);
