@@ -33,7 +33,7 @@ export const DEFAULT_CATEGORIES = {
 };
 
 export const PROFILES = [
-  { id: 'personal', name: 'Personal', docId: 'main' },
+  { id: 'personal', name: 'Personal', docId: 'personal' },
   { id: 'business', name: 'Business', docId: 'business' },
 ];
 
@@ -182,9 +182,17 @@ export const DEFAULT_CATEGORIES_BUSINESS = {
 export function mergeCategories(savedCats, profileId = 'personal') {
   const defs = profileId === 'business' ? DEFAULT_CATEGORIES_BUSINESS : DEFAULT_CATEGORIES;
   if (!savedCats) return defs;
+  const businessCatIds = new Set(['raw_materials', 'food_travel', 'share_distribution', 'materials', 'marketing', 'software', 'salaries', 'sale', 'investment', 'client_pay']);
+  const personalCatIds = new Set(['food', 'slice', 'daily', 'rent', 'medical', 'repayment', 'salary', 'received', 'freelance', 'bonus']);
+
   const merged = {};
   for (const t of ['debit', 'credit', 'returnable', 'borrowed']) {
-    const saved = savedCats[t] || [];
+    let saved = savedCats[t] || [];
+    if (profileId === 'personal') {
+      saved = saved.filter(c => !businessCatIds.has(c.id));
+    } else {
+      saved = saved.filter(c => !personalCatIds.has(c.id));
+    }
     const defList = defs[t] || [];
     const ids = new Set(saved.map(c => c.id));
     const toAppend = defList.filter(d => !ids.has(d.id));
