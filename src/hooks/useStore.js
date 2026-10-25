@@ -30,16 +30,16 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
   // One-time restoration of all 34 Personal transactions, 3 EMIs, Slice category, and ₹2,694 calibrated balance
   useEffect(() => {
     if (!ready || activeProfileId !== 'personal' || !data) return;
-    const restoreKey = '_personal_restored_34_entries_v3';
+    const restoreKey = '_personal_restored_34_entries_v4';
     if (data[restoreKey]) return;
 
     update(d => {
       d[restoreKey] = true;
       if (!d.months) d.months = {};
 
-      // 1. Restore all 26 October entries & set basepower to 608 (remaining = exactly ₹2,694)
+      // 1. Restore all 26 October entries & set basepower to 15917 (overall In-Pocket balance = exactly ₹2,694)
       d.months['2026-10'] = {
-        basepower: 608,
+        basepower: 15917,
         basepowerAutoFilled: false,
         entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)),
       };
