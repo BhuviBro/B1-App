@@ -4,7 +4,8 @@ import {
   getMonthWithCarryForward, uid, uid_radar,
   monthKey, DEFAULT_CATEGORIES, DEFAULT_CATEGORIES_BUSINESS, DEFAULT_BUSINESS_PARTNERS,
   SHEET_ENTRIES_OCT_2026, mergeCategories, PROFILES, nowTimeStr, todayStr,
-  PERSONAL_RECURRING_EMIS, PERSONAL_ENTRIES_OCT_2026, PERSONAL_ENTRIES_SEP_2026
+  PERSONAL_RECURRING_EMIS, PERSONAL_ENTRIES_OCT_2026, PERSONAL_ENTRIES_SEP_2026,
+  isBelowThreeEmi
 } from '../utils/storage';
 import {
   fetchFromGoogleSheet, pushToGoogleSheet, normalizeSheetDate, parseSheetAmount, CATEGORY_MAP
@@ -41,7 +42,9 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
   const monthData  = getMonthWithCarryForward(JSON.parse(JSON.stringify(safeData)), currentKey);
   const categories = mergeCategories(safeData.categories, currentProfile.id);
   const partners   = safeData.partners   || (currentProfile.id === 'business' ? DEFAULT_BUSINESS_PARTNERS : []);
-  const recurring  = safeData.recurring  || [];
+  const recurring  = currentProfile.id === 'personal'
+    ? (safeData.recurring || []).filter(r => !isBelowThreeEmi(r))
+    : (safeData.recurring || []);
   const radar      = safeData.radar      || [];
   const trash      = safeData.trash      || [];
   const expected   = safeData.expected   || [];

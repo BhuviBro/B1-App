@@ -72,42 +72,50 @@ export const SHEET_ENTRIES_OCT_2026 = [
   { id: 'sh_24', type: 'credit', label: 'kjf',                                       amount: 1,      category: 'raw_materials',      date: '2026-10-25', time: '15:06', returns: [] },
 ];
 
+export function isBelowThreeEmi(r) {
+  if (!r) return false;
+  if (r.id === 'rec_emi_5236' || r.id === 'rec_emi_2094' || r.id === 'rec_emi_733') return true;
+  const lbl = (r.label || '').replace(/\s+/g, ' ').trim();
+  if (/^EMI\s*[\u2014\-]\s*(5236|2094|733)$/i.test(lbl)) return true;
+  return false;
+}
+
 export const PERSONAL_RECURRING_EMIS = [
   {
-    id: 'rec_emi_5236',
-    label: 'EMI — 5236',
-    amount: 5236,
-    dueDay: 5,
+    id: 'rec_slice_5236',
+    label: 'Slice - 5236',
+    amount: 507,
+    dueDay: 1,
     alertDaysBefore: 5,
-    category: 'repayment',
+    category: 'slice',
     isLoan: true,
-    totalBorrowed: null,
-    tenureMonths: null,
-    history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
+    totalBorrowed: 5236,
+    tenureMonths: 11,
+    history: { '2026-09': 'paid', '2026-10': 'paid' },
   },
   {
-    id: 'rec_emi_2094',
-    label: 'EMI — 2094',
-    amount: 2094,
-    dueDay: 5,
+    id: 'rec_slice_2094',
+    label: 'Slice-2094',
+    amount: 204,
+    dueDay: 1,
     alertDaysBefore: 5,
-    category: 'repayment',
+    category: 'slice',
     isLoan: true,
-    totalBorrowed: null,
-    tenureMonths: null,
-    history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
+    totalBorrowed: 2094,
+    tenureMonths: 11,
+    history: { '2026-09': 'paid', '2026-10': 'paid' },
   },
   {
-    id: 'rec_emi_733',
-    label: 'EMI — 733',
-    amount: 733,
-    dueDay: 5,
+    id: 'rec_slice_733',
+    label: 'Slice - 733',
+    amount: 91,
+    dueDay: 1,
     alertDaysBefore: 5,
-    category: 'repayment',
+    category: 'slice',
     isLoan: true,
-    totalBorrowed: null,
-    tenureMonths: null,
-    history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
+    totalBorrowed: 733,
+    tenureMonths: 8,
+    history: { '2026-09': 'paid', '2026-10': 'paid' },
   },
 ];
 

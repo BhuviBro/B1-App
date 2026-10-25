@@ -9,7 +9,8 @@ import {
   PERSONAL_ENTRIES_OCT_2026,
   PERSONAL_ENTRIES_SEP_2026,
   PERSONAL_RECURRING_EMIS,
-  mergeCategories
+  mergeCategories,
+  isBelowThreeEmi
 } from "../utils/storage";
 
 function userDocRef(uid, docId = 'personal') {
@@ -98,6 +99,9 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
         if (profileId === 'business') {
           parsed.recurring = [];
         }
+        if (profileId === 'personal' && Array.isArray(parsed.recurring)) {
+          parsed.recurring = parsed.recurring.filter(r => !isBelowThreeEmi(r));
+        }
         setData(parsed);
         setReady(true);
       } else {
@@ -168,56 +172,31 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
           }
         }
 
-        // --- PERSONAL PROFILE (Retain EMIs and all respective EMI payments) ---
-        if (profileId === 'personal' && isOwner) {
+        // --- PERSONAL PROFILE ---
+        if (profileId === 'personal') {
           partners = []; // Personal never has partners
 
-          // 1. Ensure the 3 recurring EMIs exist in Personal
-          const existingRec = Array.isArray(recurring) && recurring.length > 0 ? recurring : [];
-          const existingRecIds = new Set(existingRec.map(r => r.id));
-          const missingRecs = PERSONAL_RECURRING_EMIS.filter(r => !existingRecIds.has(r.id));
-          if (missingRecs.length > 0) {
-            recurring = [...existingRec, ...JSON.parse(JSON.stringify(missingRecs))];
-          }
-
-          // 2. Ensure October 2026 retains the 3 EMI payment entries
-          if (!months['2026-10']) months['2026-10'] = { basepower: 15917, entries: [] };
-          const octEntries = months['2026-10'].entries || [];
-          const octIds = new Set(octEntries.map(e => e.id));
-          const octEmiPayments = [
-            { id: 'p_oct_21', type: 'debit', label: 'EMI — 733',  amount: 733,  category: 'repayment', date: '2026-10-20', time: '11:22', recurringId: 'rec_emi_733',  isRecurringEntry: true, returns: [] },
-            { id: 'p_oct_22', type: 'debit', label: 'EMI — 2094', amount: 2094, category: 'repayment', date: '2026-10-20', time: '11:05', recurringId: 'rec_emi_2094', isRecurringEntry: true, returns: [] },
-            { id: 'p_oct_23', type: 'debit', label: 'EMI — 5236', amount: 5236, category: 'repayment', date: '2026-10-20', time: '10:18', recurringId: 'rec_emi_5236', isRecurringEntry: true, returns: [] },
-          ];
-          const missingOctEmis = octEmiPayments.filter(p => !octIds.has(p.id));
-          if (missingOctEmis.length > 0) {
-            months['2026-10'].entries = [...octEntries, ...missingOctEmis];
-          }
-
-          // 3. Ensure September 2026 retains the EMI payment entries
-          if (!months['2026-09']) months['2026-09'] = { basepower: 0, entries: [] };
-          const sepEntries = months['2026-09'].entries || [];
-          const sepIds = new Set(sepEntries.map(e => e.id));
-          const sepEmiPayments = [
-            { id: 'p_sep_01', type: 'debit', label: 'EMI — 733',  amount: 733,  category: 'repayment', date: '2026-09-09', time: '15:42', recurringId: 'rec_emi_733',  isRecurringEntry: true, returns: [] },
-            { id: 'p_sep_02', type: 'debit', label: 'EMI — 2094', amount: 2094, category: 'repayment', date: '2026-09-09', time: '15:30', recurringId: 'rec_emi_2094', isRecurringEntry: true, returns: [] },
-            { id: 'p_sep_03', type: 'debit', label: 'EMI — 5236', amount: 5236, category: 'repayment', date: '2026-09-09', time: '14:15', recurringId: 'rec_emi_5236', isRecurringEntry: true, returns: [] },
-            { id: 'p_sep_07', type: 'debit', label: 'EMI — 5236', amount: 5236, category: 'repayment', date: '2026-09-05', time: '11:24', recurringId: 'rec_emi_5236', isRecurringEntry: true, returns: [] },
-          ];
-          const missingSepEmis = sepEmiPayments.filter(p => !sepIds.has(p.id));
-          if (missingSepEmis.length > 0) {
-            months['2026-09'].entries = [...sepEntries, ...missingSepEmis];
+          // Delete the below 3 EMIs ('EMI — 5236', 'EMI — 2094', 'EMI — 733') and retain the above 3
+          if (Array.isArray(recurring) && recurring.length > 0) {
+            const cleanedRec = recurring.filter(r => !isBelowThreeEmi(r));
+            if (cleanedRec.length !== recurring.length) {
+              recurring = cleanedRec;
+              if (isOwner) {
+                setDoc(ref, { recurring: cleanedRec }, { merge: true })
+                  .catch(e => console.warn('Syncing cleaned personal recurring error:', e));
+              }
+            }
           }
 
           // If months had 0 entries, populate default personal template
-          if (months['2026-10'].entries.length === 0) {
+          if (months['2026-10'] && (months['2026-10'].entries?.length || 0) === 0) {
             months['2026-10'] = {
               basepower: 15917,
               basepowerAutoFilled: false,
               entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)),
             };
           }
-          if (months['2026-09'].entries.length === 0) {
+          if (months['2026-09'] && (months['2026-09'].entries?.length || 0) === 0) {
             months['2026-09'] = {
               basepower: 0,
               basepowerAutoFilled: false,
@@ -231,7 +210,7 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
           months,
           categories: mergeCategories(d.categories, profileId),
           partners:   profileId === 'business' ? (partners || DEFAULT_BUSINESS_PARTNERS) : [],
-          recurring:  profileId === 'business' ? [] : recurring,
+          recurring:  profileId === 'business' ? [] : (profileId === 'personal' ? recurring.filter(r => !isBelowThreeEmi(r)) : recurring),
           radar:      d.radar      || [],
           trash:      d.trash      || [],
           expected:   d.expected   || [],
