@@ -153,12 +153,8 @@ function AppInner({ user, signOut }) {
   const overall    = calcOverallBalance(data);
 
   const recentEntries = (() => {
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 1);
-    twoDaysAgo.setHours(0, 0, 0, 0);
-    const cutoff = twoDaysAgo.toISOString().slice(0, 10);
     return allEntries
-      .filter(e => e.type !== 'returnable' && e.type !== 'borrowed' && e.date >= cutoff)
+      .filter(e => e.type !== 'returnable' && e.type !== 'borrowed')
       .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')))
       .slice(0, 10);
   })();

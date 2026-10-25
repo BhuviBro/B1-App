@@ -16,7 +16,7 @@ export default function Transactions({ entries, onEdit, onDelete, categories }) 
     return (
       <div className={s.empty}>
         <Icon name="logs" size={28} stroke="var(--text3)" />
-        <div className={s.emptyText}>No transactions in the last 2 days.<br />Tap + to add one.</div>
+        <div className={s.emptyText}>No transactions this month.<br />Tap + to add one.</div>
       </div>
     );
   }
