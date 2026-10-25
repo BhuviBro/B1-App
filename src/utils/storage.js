@@ -37,11 +37,11 @@ export const PROFILES = [
 ];
 
 export const DEFAULT_BUSINESS_PARTNERS = [
-  { id: 'bhuvan',  name: 'Bhuvan',  sharePct: 38.0, allocated: 2169.80, withdrawn: 567.50, available: 1602.30, color: '#a78bfa' },
-  { id: 'kushal',  name: 'Kushal',  sharePct: 15.5, allocated: 885.05,  withdrawn: 567.50, available: 317.55,  color: '#38bdf8' },
-  { id: 'amulya',  name: 'Amulya',  sharePct: 15.5, allocated: 885.05,  withdrawn: 0,      available: 885.05,  color: '#fbbf24' },
-  { id: 'deepika', name: 'Deepika', sharePct: 15.5, allocated: 885.05,  withdrawn: 0,      available: 885.05,  color: '#f472b6' },
-  { id: 'anagha',  name: 'Anagha',  sharePct: 15.5, allocated: 885.05,  withdrawn: 0,      available: 885.05,  color: '#34d399' },
+  { id: 'bhuvan',  name: 'Bhuvan',  sharePct: 38.0, allocated: 1978.28, withdrawn: 567.50, available: 1410.78, color: '#a78bfa' },
+  { id: 'kushal',  name: 'Kushal',  sharePct: 15.5, allocated: 806.93,  withdrawn: 567.50, available: 239.43,  color: '#38bdf8' },
+  { id: 'amulya',  name: 'Amulya',  sharePct: 15.5, allocated: 806.93,  withdrawn: 0,      available: 806.93,  color: '#fbbf24' },
+  { id: 'deepika', name: 'Deepika', sharePct: 15.5, allocated: 806.93,  withdrawn: 0,      available: 806.93,  color: '#f472b6' },
+  { id: 'anagha',  name: 'Anagha',  sharePct: 15.5, allocated: 806.93,  withdrawn: 0,      available: 806.93,  color: '#34d399' },
 ];
 
 export const SHEET_ENTRIES_OCT_2026 = [
@@ -65,7 +65,8 @@ export const SHEET_ENTRIES_OCT_2026 = [
   { id: 'sh_18', type: 'debit',  label: 'Petrol - Bhuvan - 100',       amount: 100,    category: 'food_travel',        date: '2026-10-24', time: '09:00', returns: [] },
   { id: 'sh_19', type: 'debit',  label: 'Bhavani Printout for Naivedyam', amount: 80,  category: 'raw_materials',      date: '2026-10-24', time: '10:00', returns: [] },
   { id: 'sh_20', type: 'debit',  label: 'Petrol-Kushal',               amount: 600,    category: 'food_travel',        date: '2026-10-24', time: '11:00', returns: [] },
-  { id: 'sh_21', type: 'credit', label: 'Advance from Naivedyam 2000, Balance 2800', amount: 2000, category: 'sale',  date: '2026-10-27', time: '10:05', returns: [] },
+  { id: 'sh_21', type: 'credit', label: 'Advance from Naivedyam 2000, Balance 2800', amount: 2000, category: 'sale',  date: '2026-10-24', time: '10:05', returns: [] },
+  { id: 'sh_22', type: 'debit',  label: 'NFC Cards -3',                amount: 504,    category: 'raw_materials',      date: '2026-10-25', time: '10:05', returns: [] },
 ];
 
 export const DEFAULT_CATEGORIES_BUSINESS = {

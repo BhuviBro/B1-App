@@ -23,115 +23,60 @@ export function useStore(uid_user, activeProfileId = 'personal') {
     localStorage.setItem('b1-theme', theme);
   }, [theme]);
 
-  // Auto-inject requested EMIs into Personal profile once (idempotent)
+  // One-time calibration of Personal balance to exact requested ₹2,694
   useEffect(() => {
     if (!ready || activeProfileId !== 'personal' || !data) return;
-    const injectedFlag = '_emis_injected_v2';
-    if (data[injectedFlag]) return;
+    const balanceCalibratedKey = '_balance_calibrated_oct25_2694';
+    if (data[balanceCalibratedKey]) return;
 
     update(d => {
-      d[injectedFlag] = true;
-      if (!d.recurring) d.recurring = [];
+      d[balanceCalibratedKey] = true;
+      const mo = getMonthWithCarryForward(d, '2026-10');
+      const entries = mo.entries || [];
+
+      let income = 0;
+      let spent = 0;
+      let lent = 0;
+      let returned = 0;
+      let borrowed = 0;
+      let repaid = 0;
+
+      entries.forEach(e => {
+        if (e.type === 'credit' && !e.isReturnCredit) income += e.amount;
+        else if (e.type === 'debit' && !e.isBorrowRepayment) spent += e.amount;
+        else if (e.type === 'returnable') {
+          lent += e.amount;
+          (e.returns || []).forEach(r => { returned += r.amount; });
+        } else if (e.type === 'borrowed') {
+          borrowed += e.amount;
+          (e.returns || []).forEach(r => { repaid += r.amount; });
+        }
+      });
+
+      const netLent = Math.max(0, lent - returned);
+      const netBorrowed = Math.max(0, borrowed - repaid);
+
+      const targetRemaining = 2694;
+      const neededBasepower = Math.round(targetRemaining - income + spent + netLent - netBorrowed);
+      mo.basepower = Math.max(0, neededBasepower);
+      mo.basepowerAutoFilled = false;
+    });
+  }, [ready, activeProfileId, data]);
+
+  // One-time live Google Sheet sync for Business profile (all 22 transactions up to Oct 25)
+  useEffect(() => {
+    if (!ready || activeProfileId !== 'business' || !data) return;
+    const syncedKey = '_business_sheet_synced_v3';
+    if (data[syncedKey]) return;
+
+    update(d => {
+      d[syncedKey] = true;
       if (!d.months) d.months = {};
-
-      const emi5236Id = 'rec_emi_5236';
-      const emi2094Id = 'rec_emi_2094';
-      const emi733Id  = 'rec_emi_733';
-
-      const existingIds = new Set(d.recurring.map(r => r.id));
-
-      if (!existingIds.has(emi5236Id)) {
-        d.recurring.push({
-          id: emi5236Id,
-          label: 'EMI — 5236',
-          amount: 5236,
-          dueDay: 5,
-          alertDaysBefore: 5,
-          category: 'repayment',
-          isLoan: true,
-          totalBorrowed: null,
-          tenureMonths: null,
-          history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
-        });
-      } else {
-        const r = d.recurring.find(x => x.id === emi5236Id);
-        r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
-      }
-
-      if (!existingIds.has(emi2094Id)) {
-        d.recurring.push({
-          id: emi2094Id,
-          label: 'EMI — 2094',
-          amount: 2094,
-          dueDay: 5,
-          alertDaysBefore: 5,
-          category: 'repayment',
-          isLoan: true,
-          totalBorrowed: null,
-          tenureMonths: null,
-          history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
-        });
-      } else {
-        const r = d.recurring.find(x => x.id === emi2094Id);
-        r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
-      }
-
-      if (!existingIds.has(emi733Id)) {
-        d.recurring.push({
-          id: emi733Id,
-          label: 'EMI — 733',
-          amount: 733,
-          dueDay: 5,
-          alertDaysBefore: 5,
-          category: 'repayment',
-          isLoan: true,
-          totalBorrowed: null,
-          tenureMonths: null,
-          history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
-        });
-      } else {
-        const r = d.recurring.find(x => x.id === emi733Id);
-        r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
-      }
-
-      if (!d.months['2026-09']) {
-        d.months['2026-09'] = { basepower: 0, entries: [] };
-      }
-      const sepEntries = d.months['2026-09'].entries || [];
-      const sepIds = new Set(sepEntries.map(e => e.id));
-
-      const newSepEntries = [
-        { id: 'emi_5236_sep05', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-09-05', time: '11:24', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
-        { id: 'emi_5236_sep09', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-09-09', time: '14:15', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
-        { id: 'emi_2094_sep09', amount: 2094, type: 'debit', label: 'EMI — 2094', category: 'repayment', date: '2026-09-09', time: '15:30', recurringId: emi2094Id, isRecurringEntry: true, returns: [] },
-        { id: 'emi_733_sep09',  amount: 733,  type: 'debit', label: 'EMI — 733',  category: 'repayment', date: '2026-09-09', time: '15:42', recurringId: emi733Id,  isRecurringEntry: true, returns: [] },
-      ];
-
-      for (const ent of newSepEntries) {
-        if (!sepIds.has(ent.id)) {
-          sepEntries.push(ent);
-        }
-      }
-      d.months['2026-09'].entries = sepEntries;
-
-      if (!d.months['2026-10']) {
-        d.months['2026-10'] = { basepower: 0, entries: [] };
-      }
-      const octEntries = d.months['2026-10'].entries || [];
-      const octIds = new Set(octEntries.map(e => e.id));
-
-      const newOctEntries = [
-        { id: 'emi_5236_oct20', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-10-20', time: '10:18', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
-        { id: 'emi_2094_oct20', amount: 2094, type: 'debit', label: 'EMI — 2094', category: 'repayment', date: '2026-10-20', time: '11:05', recurringId: emi2094Id, isRecurringEntry: true, returns: [] },
-        { id: 'emi_733_oct20',  amount: 733,  type: 'debit', label: 'EMI — 733',  category: 'repayment', date: '2026-10-20', time: '11:22', recurringId: emi733Id,  isRecurringEntry: true, returns: [] },
-      ];
-
-      for (const ent of newOctEntries) {
-        if (!octIds.has(ent.id)) {
-          octEntries.push(ent);
-        }
-      }
-      d.months['2026-10'].entries = octEntries;
+      d.months['2026-10'] = {
+        basepower: d.months['2026-10']?.basepower || 0,
+        entries: JSON.parse(JSON.stringify(SHEET_ENTRIES_OCT_2026)),
+      };
+      d.partners = JSON.parse(JSON.stringify(DEFAULT_BUSINESS_PARTNERS));
     });
   }, [ready, activeProfileId, data]);
 
