@@ -148,16 +148,35 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal', userEm
         }
 
         if (profileId === 'personal' && isOwner) {
-          const totalEntries = Object.values(months).reduce((acc, m) => acc + (m.entries?.length || 0), 0);
-          if (totalEntries === 0) {
-            months = {
-              '2026-09': { basepower: 0, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)) },
-              '2026-10': { basepower: 15917, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)) },
+          let updated = false;
+
+          // 1. Ensure 2026-09 has all 8 September entries
+          if (!months['2026-09'] || !months['2026-09'].entries || months['2026-09'].entries.length === 0) {
+            months['2026-09'] = {
+              basepower: 0,
+              basepowerAutoFilled: false,
+              entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)),
             };
-            if (!recurring || recurring.length === 0) {
-              recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
-            }
-            // Auto-persist seeded personal data to Firestore so it is stored in Cloud
+            updated = true;
+          }
+
+          // 2. Ensure 2026-10 has all 26 October entries (if missing or wiped)
+          if (!months['2026-10'] || !months['2026-10'].entries || months['2026-10'].entries.length < 20) {
+            months['2026-10'] = {
+              basepower: 15917,
+              basepowerAutoFilled: false,
+              entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)),
+            };
+            updated = true;
+          }
+
+          // 3. Ensure recurring has all 3 EMIs with paid history
+          if (!recurring || recurring.length === 0) {
+            recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
+            updated = true;
+          }
+
+          if (updated) {
             setDoc(ref, {
               months,
               categories: mergeCategories(d.categories, profileId),
@@ -166,13 +185,7 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal', userEm
               radar: d.radar || [],
               trash: d.trash || [],
               expected: d.expected || [],
-            }).catch(e => console.warn('Seeding personal doc error:', e));
-          } else if (!recurring || recurring.length === 0) {
-            recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
-            setDoc(ref, {
-              ...d,
-              recurring,
-            }).catch(e => console.warn('Seeding personal recurring error:', e));
+            }).catch(e => console.warn('Syncing personal history error:', e));
           }
         }
 
@@ -218,12 +231,19 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal', userEm
             }
           }
 
-          if (profileId === 'personal') {
-            const totalEntries = Object.values(months).reduce((acc, m) => acc + (m.entries?.length || 0), 0);
-            if (totalEntries === 0) {
-              months = {
-                '2026-09': { basepower: 0, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)) },
-                '2026-10': { basepower: 15917, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)) },
+          if (profileId === 'personal' && isOwner) {
+            if (!months['2026-09'] || !months['2026-09'].entries || months['2026-09'].entries.length === 0) {
+              months['2026-09'] = {
+                basepower: 0,
+                basepowerAutoFilled: false,
+                entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)),
+              };
+            }
+            if (!months['2026-10'] || !months['2026-10'].entries || months['2026-10'].entries.length < 20) {
+              months['2026-10'] = {
+                basepower: 15917,
+                basepowerAutoFilled: false,
+                entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)),
               };
             }
             if (!recurring || recurring.length === 0) {
