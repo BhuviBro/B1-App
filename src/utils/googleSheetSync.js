@@ -19,33 +19,43 @@ export const CATEGORY_MAP = {
   'other': 'other_d',
 };
 
-export function normalizeSheetDate(dateStr) {
-  if (!dateStr) return { date: new Date().toISOString().slice(0, 10), time: '09:00' };
-  const str = String(dateStr).trim();
+export function normalizeSheetDate(dateStr, timeStr) {
+  let parsedDate = '';
+  let parsedTime = '09:00';
 
-  // Pattern 1: YYYY-MM-DD HH:MM:SS
-  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}:\d{2}))?/);
-  if (isoMatch) {
-    return {
-      date: `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`,
-      time: isoMatch[4] || '09:00',
-    };
+  if (timeStr) {
+    const t = String(timeStr).trim();
+    if (t.match(/^\d{1,2}:\d{2}/)) {
+      parsedTime = t.slice(0, 5);
+    }
   }
 
-  // Pattern 2: DD/MM/YYYY or DD/MM/YYYYY (typo like 20226)
-  const dmyMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4,5})(?:\s+(\d{2}:\d{2}))?/);
-  if (dmyMatch) {
-    const d = String(dmyMatch[1]).padStart(2, '0');
-    const m = String(dmyMatch[2]).padStart(2, '0');
-    let y = dmyMatch[3];
-    if (y.length > 4) y = '2026'; // fix typo like 20226 -> 2026
-    return {
-      date: `${y}-${m}-${d}`,
-      time: dmyMatch[4] || '09:00',
-    };
+  if (dateStr) {
+    const str = String(dateStr).trim();
+    // Pattern 1: YYYY-MM-DD
+    const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}:\d{2}))?/);
+    if (isoMatch) {
+      parsedDate = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+      if (!timeStr && isoMatch[4]) parsedTime = isoMatch[4];
+    } else {
+      // Pattern 2: DD/MM/YYYY or DD/MM/YYYYY
+      const dmyMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4,5})(?:\s+(\d{2}:\d{2}))?/);
+      if (dmyMatch) {
+        const d = String(dmyMatch[1]).padStart(2, '0');
+        const m = String(dmyMatch[2]).padStart(2, '0');
+        let y = dmyMatch[3];
+        if (y.length > 4) y = '2026';
+        parsedDate = `${y}-${m}-${d}`;
+        if (!timeStr && dmyMatch[4]) parsedTime = dmyMatch[4];
+      }
+    }
   }
 
-  return { date: new Date().toISOString().slice(0, 10), time: '09:00' };
+  if (!parsedDate) {
+    parsedDate = new Date().toISOString().slice(0, 10);
+  }
+
+  return { date: parsedDate, time: parsedTime };
 }
 
 export function parseSheetAmount(val) {
@@ -107,6 +117,8 @@ export async function pushToGoogleSheet(webhookUrl, entry) {
     const payload = {
       action: 'add',
       entry: {
+        date: entry.date,
+        time: entry.time || '09:00:00',
         dateTime: `${entry.date} ${entry.time || '09:00'}:00`,
         description: entry.label || '',
         amount: entry.amount || 0,
@@ -133,7 +145,7 @@ export async function pushToGoogleSheet(webhookUrl, entry) {
 
 export const APPS_SCRIPT_TEMPLATE = `// ==========================================
 // B1 EXPENSE TRACKER - GOOGLE APPS SCRIPT
-// Bidirectional Live Sync for B1 Expense Tracker
+// Updated for Separate Date (Col B) & Time (Col C)
 // ==========================================
 
 function doGet(e) {
@@ -142,36 +154,44 @@ function doGet(e) {
     var sheet = ss.getSheetByName("Sheet1") || ss.getActiveSheet();
     var data = sheet.getDataRange().getValues();
 
-    // 1. Detect Header Row for Transactions
+    // 1. Detect Header Row & Separate Date/Time Columns
     var headerRowIdx = -1;
-    var colDate = 0, colDesc = 1, colAmt = 2, colType = 3, colCat = 4, colPartner = 5;
+    var colDate = 1, colTime = 2, colDesc = 3, colAmt = 4, colType = 5, colCat = 6, colPartner = 7;
 
     for (var r = 0; r < Math.min(10, data.length); r++) {
-      for (var c = 0; c < 4; c++) {
-        var str = String(data[r][c] || "").toLowerCase();
-        if (str.indexOf("date") !== -1 || str.indexOf("expense") !== -1) {
+      for (var c = 0; c < 5; c++) {
+        var str = String(data[r][c] || "").toLowerCase().trim();
+        if (str === "date") {
           headerRowIdx = r;
           colDate = c;
-          colDesc = c + 1;
-          colAmt = c + 2;
-          colType = c + 3;
-          colCat = c + 4;
-          colPartner = c + 5;
+          if (String(data[r][c + 1] || "").toLowerCase().indexOf("time") !== -1) {
+            colTime = c + 1;
+            colDesc = c + 2;
+            colAmt = c + 3;
+            colType = c + 4;
+            colCat = c + 5;
+            colPartner = c + 6;
+          } else {
+            colTime = -1;
+            colDesc = c + 1;
+            colAmt = c + 2;
+            colType = c + 3;
+            colCat = c + 4;
+            colPartner = c + 5;
+          }
           break;
         }
       }
       if (headerRowIdx !== -1) break;
     }
 
-    if (headerRowIdx === -1) {
-      headerRowIdx = 3; // Default to Row 4 (0-indexed 3)
-      colDate = 0; colDesc = 1; colAmt = 2; colType = 3; colCat = 4; colPartner = 5;
-    }
+    if (headerRowIdx === -1) headerRowIdx = 3;
 
     // 2. Extract Transactions
     var transactions = [];
     for (var r = headerRowIdx + 1; r < data.length; r++) {
       var dVal = data[r][colDate];
+      var tVal = colTime !== -1 ? data[r][colTime] : "";
       var descVal = data[r][colDesc];
       var amtVal = data[r][colAmt];
       var typeVal = data[r][colType];
@@ -181,9 +201,14 @@ function doGet(e) {
       if (!dVal && !descVal && !amtVal) continue;
       if (!descVal && !amtVal) continue;
 
+      var fullDateTime = String(dVal || "");
+      if (tVal) fullDateTime += " " + String(tVal);
+
       transactions.push({
         row: r + 1,
-        dateTime: String(dVal || ""),
+        dateTime: fullDateTime,
+        date: String(dVal || ""),
+        time: String(tVal || ""),
         description: String(descVal || ""),
         amount: amtVal,
         type: String(typeVal || ""),
@@ -192,9 +217,9 @@ function doGet(e) {
       });
     }
 
-    // 3. Extract Partner Breakdown Table (Columns H-K)
+    // 3. Extract Partner Breakdown Table
     var partners = [];
-    var partnerSummary = { totalProfit: 4490, totalWithdrawn: 1135, availableProfit: 3355 };
+    var partnerSummary = { totalProfit: 5206, totalWithdrawn: 1135, availableProfit: 4071 };
     var pctMap = { "bhuvan": 38.0, "kushal": 15.5, "amulya": 15.5, "deepika": 15.5, "anagha": 15.5 };
 
     for (var r = 0; r < data.length; r++) {
@@ -259,21 +284,25 @@ function doPost(e) {
     if (body.action === "add" && body.entry) {
       var entry = body.entry;
       var maxRows = Math.max(sheet.getLastRow(), 50);
-      var vals = sheet.getRange(1, 1, maxRows, 2).getValues();
+      var vals = sheet.getRange(1, 1, maxRows, 4).getValues();
       var lastRow = 4;
       for (var i = 4; i < vals.length; i++) {
-        if (vals[i][0] || vals[i][1]) {
+        if (vals[i][1] || vals[i][3]) {
           lastRow = i + 1;
         }
       }
       var targetRow = lastRow + 1;
 
-      sheet.getRange(targetRow, 1).setValue(entry.dateTime);
-      sheet.getRange(targetRow, 2).setValue(entry.description);
-      sheet.getRange(targetRow, 3).setValue(Number(entry.amount));
-      sheet.getRange(targetRow, 4).setValue(entry.type);
-      sheet.getRange(targetRow, 5).setValue(entry.category);
-      sheet.getRange(targetRow, 6).setValue(entry.partner || "");
+      var datePart = entry.date || (entry.dateTime ? entry.dateTime.split(" ")[0] : "");
+      var timePart = entry.time || (entry.dateTime && entry.dateTime.indexOf(" ") !== -1 ? entry.dateTime.split(" ")[1] : "09:00:00");
+
+      sheet.getRange(targetRow, 2).setValue(datePart);          // Col B: Date
+      sheet.getRange(targetRow, 3).setValue(timePart);          // Col C: Time
+      sheet.getRange(targetRow, 4).setValue(entry.description);   // Col D: Description
+      sheet.getRange(targetRow, 5).setValue(Number(entry.amount)); // Col E: Amount
+      sheet.getRange(targetRow, 6).setValue(entry.type);          // Col F: Credit/Debit
+      sheet.getRange(targetRow, 7).setValue(entry.category);      // Col G: Category
+      sheet.getRange(targetRow, 8).setValue(entry.partner || ""); // Col H: Partner
 
       return ContentService
         .createTextOutput(JSON.stringify({ status: "success", insertedRow: targetRow }))

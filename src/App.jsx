@@ -37,15 +37,23 @@ function AppInner({ user, signOut }) {
   const [toast, setToast]                 = useState('');
   const [prefillEntry, setPrefillEntry]   = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [activeProfileId, setActiveProfileId] = useState(() => localStorage.getItem('b1-profile') || 'personal');
+  const OWNER_EMAIL = 'bhuvibhuvan1624@gmail.com';
+  const isOwner = user?.email?.toLowerCase() === OWNER_EMAIL;
+  const [activeProfileId, setActiveProfileId] = useState(() => (isOwner ? localStorage.getItem('b1-profile') : 'personal') || 'personal');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-profile', activeProfileId);
-    localStorage.setItem('b1-profile', activeProfileId);
-  }, [activeProfileId]);
+  const effectiveProfileId = isOwner ? activeProfileId : 'personal';
 
-  const store = useStore(user.uid, activeProfileId);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-profile', effectiveProfileId);
+    if (isOwner) {
+      localStorage.setItem('b1-profile', effectiveProfileId);
+    } else {
+      localStorage.setItem('b1-profile', 'personal');
+    }
+  }, [effectiveProfileId, isOwner]);
+
+  const store = useStore(user.uid, effectiveProfileId, user.email);
   const {
     data, monthData, currentKey, changeMonth,
     addEntry, editEntry, setBasepower, addReturn, addRepayment,
@@ -61,6 +69,7 @@ function AppInner({ user, signOut }) {
   } = store;
 
   function switchProfile(pid) {
+    if (!isOwner) return;
     if (pid === activeProfileId) {
       setProfileMenuOpen(false);
       return;
@@ -179,13 +188,16 @@ function AppInner({ user, signOut }) {
           <div className={s.profilePillWrap}>
             <button
               className={s.profilePill}
-              onClick={() => setProfileMenuOpen(p => !p)}
-              title="Switch profile"
+              onClick={() => isOwner && profiles.length > 1 && setProfileMenuOpen(p => !p)}
+              style={{ cursor: (isOwner && profiles.length > 1) ? 'pointer' : 'default' }}
+              title={isOwner ? "Switch profile" : "Personal profile"}
             >
               <span>{activeProfile?.name || 'Personal'}</span>
-              <span className={s.profileCaret} style={{ transform: profileMenuOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
+              {isOwner && profiles.length > 1 && (
+                <span className={s.profileCaret} style={{ transform: profileMenuOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
+              )}
             </button>
-            {profileMenuOpen && (
+            {isOwner && profiles.length > 1 && profileMenuOpen && (
               <>
                 <div className={s.profileMenuOverlay} onClick={() => setProfileMenuOpen(false)} />
                 <div className={s.profileMenu}>

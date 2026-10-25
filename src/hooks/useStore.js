@@ -12,8 +12,11 @@ import {
 const now = new Date();
 const INIT_KEY = monthKey(now.getFullYear(), now.getMonth() + 1);
 
-export function useStore(uid_user, activeProfileId = 'personal') {
-  const currentProfile = PROFILES.find(p => p.id === activeProfileId) || PROFILES[0];
+export function useStore(uid_user, activeProfileId = 'personal', userEmail = '') {
+  const isOwner = userEmail?.toLowerCase() === 'bhuvibhuvan1624@gmail.com';
+  const allowedProfiles = isOwner ? PROFILES : PROFILES.filter(p => p.id === 'personal');
+  const effectiveProfileId = isOwner ? activeProfileId : 'personal';
+  const currentProfile = allowedProfiles.find(p => p.id === effectiveProfileId) || allowedProfiles[0];
   const { data, ready, syncing, update } = useFirestore(uid_user, currentProfile.docId, currentProfile.id);
   const [currentKey, setCurrentKey] = useState(INIT_KEY);
   const [theme, setTheme] = useState(() => localStorage.getItem('b1-theme') || 'dark');
@@ -498,7 +501,7 @@ export function useStore(uid_user, activeProfileId = 'personal') {
       const partnersList = result.partners || [];
 
       const mappedEntries = rawTx.map((tx, idx) => {
-        const { date, time } = normalizeSheetDate(tx.dateTime);
+        const { date, time } = normalizeSheetDate(tx.date || tx.dateTime, tx.time);
         const amt = parseSheetAmount(tx.amount);
         const type = String(tx.type || '').trim().toLowerCase() === 'credit' ? 'credit' : 'debit';
         const rawCat = String(tx.category || '').trim().toLowerCase();
@@ -599,7 +602,7 @@ export function useStore(uid_user, activeProfileId = 'personal') {
     radar, addRadarItem, markRadarBought, discardRadarItem,
     expected, addExpectedItem, editExpectedItem, deleteExpectedItem, markExpectedReceived,
     theme, toggleTheme,
-    activeProfile: currentProfile, profiles: PROFILES,
+    activeProfile: currentProfile, profiles: allowedProfiles,
     partners, importSheetData, clearProfileData,
     sheetWebhookUrl, setSheetWebhookUrl, syncGoogleSheet, sheetSyncing,
   };
