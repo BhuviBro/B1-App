@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import {
@@ -27,6 +27,18 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
 
   const cacheKey = `b1-v2-${docId}-${uid}`;
   const defCategories = profileId === 'business' ? DEFAULT_CATEGORIES_BUSINESS : DEFAULT_CATEGORIES;
+
+  // Active Key references to lock against stale-closure writes across profile switches
+  const activeDocIdRef = useRef(docId);
+  const activeProfileIdRef = useRef(profileId);
+
+  useEffect(() => {
+    activeDocIdRef.current = docId;
+    activeProfileIdRef.current = profileId;
+    // On profile switch, immediately clear data so stale profile state can never leak
+    setData(null);
+    setReady(false);
+  }, [docId, profileId]);
 
   function emptyData() {
     if (profileId === 'business' && isOwner) {
@@ -99,6 +111,11 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
 
     const ref = userDocRef(uid, docId);
     const unsub = onSnapshot(ref, snap => {
+      // Guard: ignore snapshot if user already switched to another profile
+      if (activeDocIdRef.current !== docId || activeProfileIdRef.current !== profileId) {
+        return;
+      }
+
       if (snap.exists()) {
         const d = snap.data();
         let months = d.months || {};
@@ -130,9 +147,9 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
           }
         }
 
-        // --- MOVE EMI PART FROM BUSINESS TO PERSONAL ---
+        // --- BUSINESS PROFILE ---
         if (profileId === 'business' && isOwner) {
-          // If Business has any recurring EMIs, transfer them to Personal and clear Business
+          // If Business has any recurring EMIs, move them to Personal and clear Business
           if (recurring && recurring.length > 0) {
             const personalRef = userDocRef(uid, 'personal');
             setDoc(personalRef, { recurring: recurring }, { merge: true })
@@ -145,17 +162,67 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
           if (!partners || partners.length === 0) {
             partners = DEFAULT_BUSINESS_PARTNERS;
           }
+
+          if ((months['2026-10']?.entries?.length || 0) === 0) {
+            months['2026-10'] = { basepower: 0, entries: [...SHEET_ENTRIES_OCT_2026] };
+          }
         }
 
-        // --- PERSONAL PROFILE ---
+        // --- PERSONAL PROFILE (Retain EMIs and all respective EMI payments) ---
         if (profileId === 'personal' && isOwner) {
           partners = []; // Personal never has partners
 
-          // Ensure recurring EMIs are present in Personal
-          if (!recurring || recurring.length === 0) {
-            recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
-            setDoc(ref, { recurring }, { merge: true })
-              .catch(e => console.warn('Seeding recurring in personal doc error:', e));
+          // 1. Ensure the 3 recurring EMIs exist in Personal
+          const existingRec = Array.isArray(recurring) && recurring.length > 0 ? recurring : [];
+          const existingRecIds = new Set(existingRec.map(r => r.id));
+          const missingRecs = PERSONAL_RECURRING_EMIS.filter(r => !existingRecIds.has(r.id));
+          if (missingRecs.length > 0) {
+            recurring = [...existingRec, ...JSON.parse(JSON.stringify(missingRecs))];
+          }
+
+          // 2. Ensure October 2026 retains the 3 EMI payment entries
+          if (!months['2026-10']) months['2026-10'] = { basepower: 15917, entries: [] };
+          const octEntries = months['2026-10'].entries || [];
+          const octIds = new Set(octEntries.map(e => e.id));
+          const octEmiPayments = [
+            { id: 'p_oct_21', type: 'debit', label: 'EMI — 733',  amount: 733,  category: 'repayment', date: '2026-10-20', time: '11:22', recurringId: 'rec_emi_733',  isRecurringEntry: true, returns: [] },
+            { id: 'p_oct_22', type: 'debit', label: 'EMI — 2094', amount: 2094, category: 'repayment', date: '2026-10-20', time: '11:05', recurringId: 'rec_emi_2094', isRecurringEntry: true, returns: [] },
+            { id: 'p_oct_23', type: 'debit', label: 'EMI — 5236', amount: 5236, category: 'repayment', date: '2026-10-20', time: '10:18', recurringId: 'rec_emi_5236', isRecurringEntry: true, returns: [] },
+          ];
+          const missingOctEmis = octEmiPayments.filter(p => !octIds.has(p.id));
+          if (missingOctEmis.length > 0) {
+            months['2026-10'].entries = [...octEntries, ...missingOctEmis];
+          }
+
+          // 3. Ensure September 2026 retains the EMI payment entries
+          if (!months['2026-09']) months['2026-09'] = { basepower: 0, entries: [] };
+          const sepEntries = months['2026-09'].entries || [];
+          const sepIds = new Set(sepEntries.map(e => e.id));
+          const sepEmiPayments = [
+            { id: 'p_sep_01', type: 'debit', label: 'EMI — 733',  amount: 733,  category: 'repayment', date: '2026-09-09', time: '15:42', recurringId: 'rec_emi_733',  isRecurringEntry: true, returns: [] },
+            { id: 'p_sep_02', type: 'debit', label: 'EMI — 2094', amount: 2094, category: 'repayment', date: '2026-09-09', time: '15:30', recurringId: 'rec_emi_2094', isRecurringEntry: true, returns: [] },
+            { id: 'p_sep_03', type: 'debit', label: 'EMI — 5236', amount: 5236, category: 'repayment', date: '2026-09-09', time: '14:15', recurringId: 'rec_emi_5236', isRecurringEntry: true, returns: [] },
+            { id: 'p_sep_07', type: 'debit', label: 'EMI — 5236', amount: 5236, category: 'repayment', date: '2026-09-05', time: '11:24', recurringId: 'rec_emi_5236', isRecurringEntry: true, returns: [] },
+          ];
+          const missingSepEmis = sepEmiPayments.filter(p => !sepIds.has(p.id));
+          if (missingSepEmis.length > 0) {
+            months['2026-09'].entries = [...sepEntries, ...missingSepEmis];
+          }
+
+          // If months had 0 entries, populate default personal template
+          if (months['2026-10'].entries.length === 0) {
+            months['2026-10'] = {
+              basepower: 15917,
+              basepowerAutoFilled: false,
+              entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)),
+            };
+          }
+          if (months['2026-09'].entries.length === 0) {
+            months['2026-09'] = {
+              basepower: 0,
+              basepowerAutoFilled: false,
+              entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)),
+            };
           }
         }
 
@@ -203,14 +270,22 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
 
   const save = useCallback(async (newData) => {
     if (!uid) return;
+    // Guard: ensure save target matches current active profile key
+    const targetDocId = activeDocIdRef.current;
+    const targetProfileId = activeProfileIdRef.current;
+    if (docId !== targetDocId || profileId !== targetProfileId) {
+      console.warn('Save aborted: profile key mismatch during active switch');
+      return;
+    }
+
     setSyncing(true);
     const cleanData = JSON.parse(JSON.stringify(newData));
-    if (profileId === 'business') {
+    if (targetProfileId === 'business') {
       cleanData.recurring = [];
     }
     try { localStorage.setItem(cacheKey, JSON.stringify(cleanData)); } catch (_) {}
     try {
-      await setDoc(userDocRef(uid, docId), cleanData);
+      await setDoc(userDocRef(uid, targetDocId), cleanData);
     } catch (e) {
       console.warn('Firestore write queued (offline):', e.code);
     } finally {
@@ -219,13 +294,17 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
   }, [uid, docId, cacheKey, profileId]);
 
   const update = useCallback((fn) => {
+    // Guard: ignore updates if docId mismatch
+    if (activeDocIdRef.current !== docId || activeProfileIdRef.current !== profileId) {
+      return;
+    }
     setData(prev => {
       const next = JSON.parse(JSON.stringify(prev || emptyData()));
       fn(next);
       save(next);
       return next;
     });
-  }, [save, defCategories]);
+  }, [save, defCategories, docId, profileId]);
 
   return { data, ready, syncing, update };
 }

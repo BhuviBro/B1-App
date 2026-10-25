@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useFirestore } from './useFirestore';
 import {
   getMonthWithCarryForward, uid, uid_radar,
@@ -21,6 +21,11 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
   const { data, ready, syncing, update } = useFirestore(uid_user, currentProfile.docId, currentProfile.id, userEmail);
   const [currentKey, setCurrentKey] = useState(INIT_KEY);
   const [theme, setTheme] = useState(() => localStorage.getItem('b1-theme') || 'dark');
+
+  const activeProfileIdRef = useRef(activeProfileId);
+  useEffect(() => {
+    activeProfileIdRef.current = activeProfileId;
+  }, [activeProfileId]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -64,7 +69,7 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
     });
 
     const activeWebhook = sheetWebhookUrl || data?.sheetWebhookUrl;
-    if (activeProfileId === 'business' && activeWebhook) {
+    if (activeProfileIdRef.current === 'business' && activeWebhook) {
       pushToGoogleSheet(activeWebhook, entry).catch(e => console.warn('Google Sheet push error:', e));
     }
 
@@ -406,37 +411,14 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
     });
   }
 
-  // Automatic Two-Way Sheet Pull:
-  // 1. Immediately on switching to Business profile
-  // 2. Automatically every 30 seconds
-  // 3. Automatically when switching back to the B1 browser tab from Google Sheets (window focus)
-  useEffect(() => {
-    if (activeProfileId !== 'business') return;
-    const url = sheetWebhookUrl || data?.sheetWebhookUrl;
-    if (!url) return;
-
-    syncGoogleSheet(url).catch(() => {});
-
-    const handleFocus = () => {
-      syncGoogleSheet(url).catch(() => {});
-    };
-    window.addEventListener('focus', handleFocus);
-
-    const interval = setInterval(() => {
-      syncGoogleSheet(url).catch(() => {});
-    }, 30000);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      clearInterval(interval);
-    };
-  }, [activeProfileId, sheetWebhookUrl, data?.sheetWebhookUrl]);
-
+  // Sync Google Sheet strictly when on the Business profile
   async function syncGoogleSheet(customUrl) {
-    if (activeProfileId !== 'business') {
+    // Tier 1: Guard before initiating network call
+    if (activeProfileIdRef.current !== 'business') {
       console.warn('Google Sheet sync aborted: active profile is not business');
       return { success: false, count: 0, isLive: false };
     }
+
     const url = (customUrl !== undefined ? customUrl : (sheetWebhookUrl || data?.sheetWebhookUrl))?.trim();
     if (!url) {
       const hasAnyEntries = Object.values(data?.months || {}).some(m => (m.entries || []).length > 0);
@@ -449,6 +431,14 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
     setSheetSyncing(true);
     try {
       const result = await fetchFromGoogleSheet(url);
+
+      // Tier 2: Guard immediately after async network call finishes
+      if (activeProfileIdRef.current !== 'business') {
+        console.warn('Google Sheet sync discarded: user switched away from business profile');
+        setSheetSyncing(false);
+        return { success: false, count: 0, isLive: false };
+      }
+
       const rawTx = result.transactions || [];
       const partnersList = result.partners || [];
 
@@ -472,7 +462,9 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
         };
       });
 
+      // Tier 3: Guard inside the update callback
       update(d => {
+        if (activeProfileIdRef.current !== 'business') return;
         if (!d.months) d.months = {};
 
         // Group entries dynamically by month key
@@ -486,24 +478,9 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
         if (!sheetByMonth['2026-10']) sheetByMonth['2026-10'] = [];
 
         Object.entries(sheetByMonth).forEach(([mKey, sheetEntries]) => {
-          const currentMo = d.months[mKey] || { basepower: 0, entries: [] };
-          const existingList = currentMo.entries || [];
-
-          // Create set of sheet entry fingerprints
-          const sheetFPs = new Set(
-            sheetEntries.map(se => `${se.date}_${se.type}_${se.amount}_${(se.label || '').toLowerCase().trim()}`)
-          );
-
-          // Preserve any local user-added entries that haven't appeared in the sheet yet
-          const preservedLocal = existingList.filter(ee => {
-            if (ee.id && ee.id.startsWith('sh_')) return false; // replace previous sheet rows
-            const fp = `${ee.date}_${ee.type}_${ee.amount}_${(ee.label || '').toLowerCase().trim()}`;
-            return !sheetFPs.has(fp);
-          });
-
           d.months[mKey] = {
-            basepower: currentMo.basepower || 0,
-            entries: [...sheetEntries, ...preservedLocal],
+            basepower: 0,
+            entries: sheetEntries,
           };
         });
 
