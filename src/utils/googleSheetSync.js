@@ -142,21 +142,23 @@ export async function pushToGoogleSheet(webhookUrl, entry) {
 
   try {
     const formattedCat = CATEGORY_DISPLAY_MAP[entry.category] || entry.category || 'Other';
+    const formattedTime = entry.time ? (entry.time.length === 5 ? `${entry.time}:00` : entry.time) : '09:00:00';
     const payload = {
       action: 'add',
       entry: {
         date: entry.date,
-        time: entry.time || '09:00:00',
-        dateTime: `${entry.date} ${entry.time || '09:00'}:00`,
+        time: formattedTime,
+        dateTime: `${entry.date} ${formattedTime}`,
         description: entry.label || '',
         amount: entry.amount || 0,
         type: entry.type === 'credit' ? 'Credit' : 'Debit',
         category: formattedCat,
-        partner: entry.partner || '',
+        partner: entry.partner || entry.person || '',
       },
     };
 
-    // Google Apps Script accepts text/plain to avoid pre-flight CORS blocks
+    console.log('[GoogleSheetSync] Pushing new transaction:', payload);
+
     await fetch(webhookUrl, {
       method: 'POST',
       mode: 'no-cors',
@@ -164,6 +166,7 @@ export async function pushToGoogleSheet(webhookUrl, entry) {
       body: JSON.stringify(payload),
     });
 
+    console.log('[GoogleSheetSync] Push successfully sent to webhook:', webhookUrl);
     return true;
   } catch (err) {
     console.warn('Failed to push to Google Sheet:', err);
@@ -369,26 +372,38 @@ function doPost(e) {
 
     if (body.action === "add" && body.entry) {
       var entry = body.entry;
-      var maxRows = Math.max(sheet.getLastRow(), 50);
-      var vals = sheet.getRange(1, 1, maxRows, 4).getValues();
-      var lastRow = 4;
-      for (var i = 4; i < vals.length; i++) {
-        if (vals[i][1] || vals[i][3]) {
-          lastRow = i + 1;
+
+      // 1. Safely find the last row with data in Date (Col B) or Description (Col D)
+      var totalRows = sheet.getLastRow();
+      var targetRow = 5; // Default: first transaction row starts at row 5
+
+      if (totalRows >= 5) {
+        var vals = sheet.getRange(1, 1, totalRows, 4).getValues();
+        var lastFilled = 4;
+        for (var i = 4; i < vals.length; i++) {
+          // Check Column B (index 1) or Column D (index 3)
+          if (String(vals[i][1] || "").trim() !== "" || String(vals[i][3] || "").trim() !== "") {
+            lastFilled = i + 1;
+          }
         }
+        targetRow = lastFilled + 1;
       }
-      var targetRow = lastRow + 1;
+
+      // 2. If targetRow is beyond the sheet's total row count, insert new row(s)
+      if (targetRow > sheet.getMaxRows()) {
+        sheet.insertRowAfter(sheet.getMaxRows());
+      }
 
       var datePart = entry.date || (entry.dateTime ? entry.dateTime.split(" ")[0] : "");
       var timePart = entry.time || (entry.dateTime && entry.dateTime.indexOf(" ") !== -1 ? entry.dateTime.split(" ")[1] : "09:00:00");
 
-      sheet.getRange(targetRow, 2).setValue(datePart);          // Col B: Date
-      sheet.getRange(targetRow, 3).setValue(timePart);          // Col C: Time
-      sheet.getRange(targetRow, 4).setValue(entry.description);   // Col D: Description
-      sheet.getRange(targetRow, 5).setValue(Number(entry.amount)); // Col E: Amount
-      sheet.getRange(targetRow, 6).setValue(entry.type);          // Col F: Credit/Debit
-      sheet.getRange(targetRow, 7).setValue(entry.category);      // Col G: Category
-      sheet.getRange(targetRow, 8).setValue(entry.partner || ""); // Col H: Partner
+      sheet.getRange(targetRow, 2).setValue(datePart);                // Col B: Date
+      sheet.getRange(targetRow, 3).setValue(timePart);                // Col C: Time
+      sheet.getRange(targetRow, 4).setValue(entry.description || ""); // Col D: Description
+      sheet.getRange(targetRow, 5).setValue(Number(entry.amount) || 0); // Col E: Amount
+      sheet.getRange(targetRow, 6).setValue(entry.type || "Debit");   // Col F: Credit/Debit
+      sheet.getRange(targetRow, 7).setValue(entry.category || "Other"); // Col G: Category
+      sheet.getRange(targetRow, 8).setValue(entry.partner || "");    // Col H: Partner
 
       return ContentService
         .createTextOutput(JSON.stringify({ status: "success", insertedRow: targetRow }))
@@ -396,7 +411,7 @@ function doPost(e) {
     }
 
     return ContentService
-      .createTextOutput(JSON.stringify({ status: "success" }))
+      .createTextOutput(JSON.stringify({ status: "success", message: "no action matched" }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService
@@ -404,3 +419,4 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 }`;
+
