@@ -40,9 +40,21 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
 
   useEffect(() => {
     if (!uid) return;
-    // On switch, reset data to null / ready=false so old profile data never flashes or leaks
-    setData(null);
-    setReady(false);
+    // Load cached data for this docId immediately so switching profiles is instant with no flicker
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        setData(JSON.parse(cached));
+        setReady(true);
+      } else {
+        setData(null);
+        setReady(false);
+      }
+    } catch (_) {
+      setData(null);
+      setReady(false);
+    }
+
     const ref = userDocRef(uid, docId);
     const unsub = onSnapshot(ref, snap => {
       if (snap.exists()) {
@@ -132,9 +144,11 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
   const save = useCallback(async (newData) => {
     if (!uid) return;
     setSyncing(true);
-    try { localStorage.setItem(cacheKey, JSON.stringify(newData)); } catch (_) {}
+    // Sanitize any potential undefined values which cause Firestore setDoc rejections
+    const cleanData = JSON.parse(JSON.stringify(newData));
+    try { localStorage.setItem(cacheKey, JSON.stringify(cleanData)); } catch (_) {}
     try {
-      await setDoc(userDocRef(uid, docId), newData);
+      await setDoc(userDocRef(uid, docId), cleanData);
     } catch (e) {
       console.warn('Firestore write queued (offline):', e.code);
     } finally {

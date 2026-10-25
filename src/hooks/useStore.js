@@ -27,54 +27,8 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
     localStorage.setItem('b1-theme', theme);
   }, [theme]);
 
-  // One-time restoration of all 34 Personal transactions, 3 EMIs, Slice category, and ₹2,694 calibrated balance
-  useEffect(() => {
-    if (!ready || activeProfileId !== 'personal' || !data) return;
-    const restoreKey = '_personal_restored_34_entries_v4';
-    if (data[restoreKey]) return;
-
-    update(d => {
-      d[restoreKey] = true;
-      if (!d.months) d.months = {};
-
-      // 1. Restore all 26 October entries & set basepower to 15917 (overall In-Pocket balance = exactly ₹2,694)
-      d.months['2026-10'] = {
-        basepower: 15917,
-        basepowerAutoFilled: false,
-        entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)),
-      };
-
-      // 2. Restore all 8 September entries
-      d.months['2026-09'] = {
-        basepower: 0,
-        basepowerAutoFilled: false,
-        entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)),
-      };
-
-      // 3. Restore all 3 EMIs (5236, 2094, 733) with full history (next target Dec 5)
-      d.recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
-
-      // 4. Ensure categories include slice
-      d.categories = mergeCategories(d.categories, 'personal');
-    });
-  }, [ready, activeProfileId, data]);
-
-  // One-time live Google Sheet sync for Business profile (all 22 transactions up to Oct 25)
-  useEffect(() => {
-    if (!ready || activeProfileId !== 'business' || !data) return;
-    const syncedKey = '_business_sheet_synced_v3';
-    if (data[syncedKey]) return;
-
-    update(d => {
-      d[syncedKey] = true;
-      if (!d.months) d.months = {};
-      d.months['2026-10'] = {
-        basepower: d.months['2026-10']?.basepower || 0,
-        entries: JSON.parse(JSON.stringify(SHEET_ENTRIES_OCT_2026)),
-      };
-      d.partners = JSON.parse(JSON.stringify(DEFAULT_BUSINESS_PARTNERS));
-    });
-  }, [ready, activeProfileId, data]);
+  // Personal & Business profile data is now authoritative in Firestore.
+  // No hardcoded hooks will overwrite live user additions, edits, or deletions.
 
 
   const defCategories = currentProfile.id === 'business' ? DEFAULT_CATEGORIES_BUSINESS : DEFAULT_CATEGORIES;
