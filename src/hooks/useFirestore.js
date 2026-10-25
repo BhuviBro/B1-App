@@ -6,6 +6,9 @@ import {
   DEFAULT_CATEGORIES_BUSINESS,
   DEFAULT_BUSINESS_PARTNERS,
   SHEET_ENTRIES_OCT_2026,
+  PERSONAL_ENTRIES_OCT_2026,
+  PERSONAL_ENTRIES_SEP_2026,
+  PERSONAL_RECURRING_EMIS,
   mergeCategories
 } from "../utils/storage";
 
@@ -35,7 +38,18 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
         expected: []
       };
     }
-    return { months: {}, categories: defCategories, recurring: [], radar: [], trash: [], expected: [] };
+    return {
+      months: {
+        '2026-09': { basepower: 0, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)) },
+        '2026-10': { basepower: 15917, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)) },
+      },
+      categories: defCategories,
+      partners: [],
+      recurring: JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS)),
+      radar: [],
+      trash: [],
+      expected: []
+    };
   }
 
   useEffect(() => {
@@ -61,6 +75,8 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
         const d = snap.data();
         let months = d.months || {};
         let partners = d.partners;
+        let recurring = d.recurring || [];
+
         if (profileId === 'business') {
           const totalEntries = Object.values(months).reduce((acc, m) => acc + (m.entries?.length || 0), 0);
           if (totalEntries === 0) {
@@ -85,12 +101,42 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
             partners = DEFAULT_BUSINESS_PARTNERS;
           }
         }
+
+        if (profileId === 'personal') {
+          const totalEntries = Object.values(months).reduce((acc, m) => acc + (m.entries?.length || 0), 0);
+          if (totalEntries === 0) {
+            months = {
+              '2026-09': { basepower: 0, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)) },
+              '2026-10': { basepower: 15917, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)) },
+            };
+            if (!recurring || recurring.length === 0) {
+              recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
+            }
+            // Auto-persist seeded personal data to Firestore so it is stored in Cloud
+            setDoc(ref, {
+              months,
+              categories: mergeCategories(d.categories, profileId),
+              partners: [],
+              recurring,
+              radar: d.radar || [],
+              trash: d.trash || [],
+              expected: d.expected || [],
+            }).catch(e => console.warn('Seeding personal doc error:', e));
+          } else if (!recurring || recurring.length === 0) {
+            recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
+            setDoc(ref, {
+              ...d,
+              recurring,
+            }).catch(e => console.warn('Seeding personal recurring error:', e));
+          }
+        }
+
         const nextData = {
           ...d,
           months,
           categories: mergeCategories(d.categories, profileId),
           partners:   partners || (profileId === 'business' ? DEFAULT_BUSINESS_PARTNERS : []),
-          recurring:  d.recurring  || [],
+          recurring:  recurring,
           radar:      d.radar      || [],
           trash:      d.trash      || [],
           expected:   d.expected   || [],
@@ -113,6 +159,8 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
           const parsed = JSON.parse(raw);
           let months = parsed.months || {};
           let partners = parsed.partners;
+          let recurring = parsed.recurring || [];
+
           if (profileId === 'business') {
             const totalEntries = Object.values(months).reduce((acc, m) => acc + (m.entries?.length || 0), 0);
             if (totalEntries === 0) {
@@ -124,11 +172,26 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
               partners = DEFAULT_BUSINESS_PARTNERS;
             }
           }
+
+          if (profileId === 'personal') {
+            const totalEntries = Object.values(months).reduce((acc, m) => acc + (m.entries?.length || 0), 0);
+            if (totalEntries === 0) {
+              months = {
+                '2026-09': { basepower: 0, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)) },
+                '2026-10': { basepower: 15917, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)) },
+              };
+            }
+            if (!recurring || recurring.length === 0) {
+              recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
+            }
+          }
+
           setData({
             ...parsed,
             months,
             partners: partners || (profileId === 'business' ? DEFAULT_BUSINESS_PARTNERS : []),
             categories: mergeCategories(parsed.categories, profileId),
+            recurring,
             trash: parsed.trash || [],
             expected: parsed.expected || [],
           });
