@@ -94,29 +94,123 @@ export function parseSheetAmount(val) {
   return parseFloat(cleaned) || 0;
 }
 
+export const DEFAULT_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1-QClRHM21pb220ffgQaO1CVbbtIy5OzIJwu1ouYb-60/gviz/tq?tqx=out:csv&sheet=Sheet1';
+
+export async function fetchFromGoogleSheetCsv(csvUrl = DEFAULT_SHEET_CSV_URL) {
+  const res = await fetch(csvUrl);
+  if (!res.ok) throw new Error(`Failed to fetch sheet CSV: ${res.status}`);
+  const raw = await res.text();
+
+  const parseCSVLine = (text) => {
+    let p = '', inQuotes = false, fields = [];
+    for (let i = 0; i < text.length; i++) {
+      let ch = text[i];
+      if (ch === '"') {
+        if (inQuotes && text[i+1] === '"') { p += '"'; i++; }
+        else { inQuotes = !inQuotes; }
+      } else if (ch === ',' && !inQuotes) {
+        fields.push(p); p = '';
+      } else {
+        p += ch;
+      }
+    }
+    fields.push(p);
+    return fields;
+  };
+
+  const rows = raw.split(/\r?\n/).filter(Boolean).map(parseCSVLine);
+  const transactions = [];
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const d = (row[1] || '').trim();
+    let t = (row[2] || '').trim();
+    const desc = (row[3] || '').trim();
+    const rawAmt = (row[4] || '').trim();
+    const type = (row[5] || '').trim();
+    const cat = (row[6] || '').trim();
+    const partner = (row[7] || '').trim();
+
+    if (d && (desc || rawAmt)) {
+      const amt = parseFloat(rawAmt.replace(/[^0-9.]/g, '')) || 0;
+      if (t.length > 5) t = t.slice(0, 5);
+      if (!t) t = '09:00';
+      transactions.push({
+        row: r + 1,
+        date: d,
+        time: t,
+        dateTime: `${d} ${t}`.trim(),
+        description: desc,
+        amount: amt,
+        type: type.toLowerCase() === 'credit' ? 'credit' : 'debit',
+        category: cat,
+        partner: partner || '',
+      });
+    }
+  }
+
+  // Parse partner breakdown table (Table 2)
+  const partners = [];
+  const pctMap = { bhuvan: 38.0, kushal: 15.5, amulya: 15.5, deepika: 15.5, anagha: 15.5 };
+  const colorMap = { bhuvan: '#a78bfa', kushal: '#38bdf8', amulya: '#fbbf24', deepika: '#f472b6', anagha: '#34d399' };
+  let partnerSummary = { totalProfit: 8007, totalWithdrawn: 1135, availableProfit: 6872 };
+
+  for (let r = 15; r < rows.length; r++) {
+    for (let c = 0; c < rows[r].length; c++) {
+      const val = (rows[r][c] || '').toLowerCase().trim();
+      if (val === 'partner' && rows[r+1] && (rows[r+1][c] || '').toLowerCase().trim() === 'bhuvan') {
+        for (let pr = r + 1; pr < Math.min(r + 8, rows.length); pr++) {
+          const name = (rows[pr][c] || '').trim();
+          if (!name) continue;
+          const alloc = parseFloat((rows[pr][c+1] || '0').replace(/[^0-9.]/g, '')) || 0;
+          const withdr = parseFloat((rows[pr][c+2] || '0').replace(/[^0-9.]/g, '')) || 0;
+          const avail = parseFloat((rows[pr][c+3] || '0').replace(/[^0-9.]/g, '')) || 0;
+          if (name.toLowerCase() === 'total') {
+            partnerSummary = { totalProfit: alloc, totalWithdrawn: withdr, availableProfit: avail };
+            break;
+          }
+          partners.push({
+            id: name.toLowerCase(),
+            name,
+            sharePct: pctMap[name.toLowerCase()] || 0,
+            allocated: alloc,
+            withdrawn: withdr,
+            available: avail,
+            color: colorMap[name.toLowerCase()] || '#60a5fa',
+          });
+        }
+        break;
+      }
+    }
+    if (partners.length > 0) break;
+  }
+
+  return { status: 'success', transactions, partners, summary: partnerSummary };
+}
+
 /**
- * Fetch live data from Google Sheet Apps Script Web App
+ * Fetch live data from Google Sheet Apps Script Web App or directly from Sheet CSV
  */
 export async function fetchFromGoogleSheet(webhookUrl) {
-  if (!webhookUrl || !webhookUrl.startsWith('http')) {
-    throw new Error('Please enter a valid Google Apps Script Web App URL.');
+  if (webhookUrl && webhookUrl.startsWith('http') && webhookUrl.includes('macros/s/')) {
+    try {
+      const res = await fetch(webhookUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'success' && Array.isArray(data.transactions) && data.transactions.length > 0) {
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn('Webhook fetch failed, falling back to direct Google Sheet endpoint:', e);
+    }
   }
 
-  const res = await fetch(webhookUrl, {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Google Sheet request failed with status: ${res.status}`);
-  }
-
-  const data = await res.json();
-  if (data.status !== 'success' && !Array.isArray(data.transactions)) {
-    throw new Error('Invalid response structure received from Google Sheet Web App.');
-  }
-
-  return data;
+  // Direct fetch from Google Sheet
+  return await fetchFromGoogleSheetCsv();
 }
 
 export const CATEGORY_DISPLAY_MAP = {
