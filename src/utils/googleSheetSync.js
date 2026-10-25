@@ -27,6 +27,13 @@ export function normalizeSheetDate(dateStr, timeStr) {
     const t = String(timeStr).trim();
     if (t.match(/^\d{1,2}:\d{2}/)) {
       parsedTime = t.slice(0, 5);
+    } else if (!isNaN(t) && t.length >= 3 && t.length <= 4 && !t.includes(':')) {
+      const num = parseInt(t, 10);
+      const h = String(Math.floor(num / 100)).padStart(2, '0');
+      const m = String(num % 100).padStart(2, '0');
+      if (parseInt(h, 10) < 24 && parseInt(m, 10) < 60) {
+        parsedTime = `${h}:${m}`;
+      }
     }
   }
 
@@ -147,6 +154,36 @@ export const APPS_SCRIPT_TEMPLATE = `// ========================================
 // B1 EXPENSE TRACKER - GOOGLE APPS SCRIPT
 // Updated for Separate Date (Col B) & Time (Col C)
 // ==========================================
+
+// --- TRIGGER: Auto-run on spreadsheet edit ---
+function onEdit(e) {
+  if (!e || !e.range) return;
+  convertFourDigitToTime(e);
+}
+
+// --- FUNCTION 1: 4-digit to time conversion ---
+function convertFourDigitToTime(e) {
+  var range = e.range;
+  var sheet = range.getSheet();
+  
+  // Sheet1, Column C (Column 3), starting from row 5
+  if (sheet.getName() === "Sheet1" && range.getColumn() === 3 && range.getRow() >= 5) {
+    var val = String(e.value || "").trim();
+    
+    // Check if input is 3 or 4 digits without a colon
+    if (!isNaN(val) && val.length >= 3 && val.length <= 4 && !val.includes(":")) {
+      var num = parseInt(val, 10);
+      var hours = Math.floor(num / 100);
+      var minutes = num % 100;
+      
+      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+        var date = new Date(1899, 11, 30, hours, minutes, 0);
+        range.setValue(date);
+        range.setNumberFormat("HH:mm:ss");
+      }
+    }
+  }
+}
 
 function doGet(e) {
   try {
