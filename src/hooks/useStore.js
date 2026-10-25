@@ -23,116 +23,117 @@ export function useStore(uid_user, activeProfileId = 'personal') {
     localStorage.setItem('b1-theme', theme);
   }, [theme]);
 
+  // Auto-inject requested EMIs into Personal profile once (idempotent)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.__injectEMIs = () => {
-        update(d => {
-          if (!d.recurring) d.recurring = [];
-          if (!d.months) d.months = {};
+    if (!ready || activeProfileId !== 'personal' || !data) return;
+    const injectedFlag = '_emis_injected_v2';
+    if (data[injectedFlag]) return;
 
-          const emi5236Id = 'rec_emi_5236';
-          const emi2094Id = 'rec_emi_2094';
-          const emi733Id  = 'rec_emi_733';
+    update(d => {
+      d[injectedFlag] = true;
+      if (!d.recurring) d.recurring = [];
+      if (!d.months) d.months = {};
 
-          const existingIds = new Set(d.recurring.map(r => r.id));
+      const emi5236Id = 'rec_emi_5236';
+      const emi2094Id = 'rec_emi_2094';
+      const emi733Id  = 'rec_emi_733';
 
-          if (!existingIds.has(emi5236Id)) {
-            d.recurring.push({
-              id: emi5236Id,
-              label: 'EMI — 5236',
-              amount: 5236,
-              dueDay: 5,
-              alertDaysBefore: 5,
-              category: 'repayment',
-              isLoan: true,
-              totalBorrowed: null,
-              tenureMonths: null,
-              history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
-            });
-          } else {
-            const r = d.recurring.find(x => x.id === emi5236Id);
-            r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
-          }
+      const existingIds = new Set(d.recurring.map(r => r.id));
 
-          if (!existingIds.has(emi2094Id)) {
-            d.recurring.push({
-              id: emi2094Id,
-              label: 'EMI — 2094',
-              amount: 2094,
-              dueDay: 5,
-              alertDaysBefore: 5,
-              category: 'repayment',
-              isLoan: true,
-              totalBorrowed: null,
-              tenureMonths: null,
-              history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
-            });
-          } else {
-            const r = d.recurring.find(x => x.id === emi2094Id);
-            r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
-          }
-
-          if (!existingIds.has(emi733Id)) {
-            d.recurring.push({
-              id: emi733Id,
-              label: 'EMI — 733',
-              amount: 733,
-              dueDay: 5,
-              alertDaysBefore: 5,
-              category: 'repayment',
-              isLoan: true,
-              totalBorrowed: null,
-              tenureMonths: null,
-              history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
-            });
-          } else {
-            const r = d.recurring.find(x => x.id === emi733Id);
-            r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
-          }
-
-          if (!d.months['2026-09']) {
-            d.months['2026-09'] = { basepower: 0, entries: [] };
-          }
-          const sepEntries = d.months['2026-09'].entries || [];
-          const sepIds = new Set(sepEntries.map(e => e.id));
-
-          const newSepEntries = [
-            { id: 'emi_5236_sep05', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-09-05', time: '11:24', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
-            { id: 'emi_5236_sep09', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-09-09', time: '14:15', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
-            { id: 'emi_2094_sep09', amount: 2094, type: 'debit', label: 'EMI — 2094', category: 'repayment', date: '2026-09-09', time: '15:30', recurringId: emi2094Id, isRecurringEntry: true, returns: [] },
-            { id: 'emi_733_sep09',  amount: 733,  type: 'debit', label: 'EMI — 733',  category: 'repayment', date: '2026-09-09', time: '15:42', recurringId: emi733Id,  isRecurringEntry: true, returns: [] },
-          ];
-
-          for (const ent of newSepEntries) {
-            if (!sepIds.has(ent.id)) {
-              sepEntries.push(ent);
-            }
-          }
-          d.months['2026-09'].entries = sepEntries;
-
-          if (!d.months['2026-10']) {
-            d.months['2026-10'] = { basepower: 0, entries: [] };
-          }
-          const octEntries = d.months['2026-10'].entries || [];
-          const octIds = new Set(octEntries.map(e => e.id));
-
-          const newOctEntries = [
-            { id: 'emi_5236_oct20', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-10-20', time: '10:18', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
-            { id: 'emi_2094_oct20', amount: 2094, type: 'debit', label: 'EMI — 2094', category: 'repayment', date: '2026-10-20', time: '11:05', recurringId: emi2094Id, isRecurringEntry: true, returns: [] },
-            { id: 'emi_733_oct20',  amount: 733,  type: 'debit', label: 'EMI — 733',  category: 'repayment', date: '2026-10-20', time: '11:22', recurringId: emi733Id,  isRecurringEntry: true, returns: [] },
-          ];
-
-          for (const ent of newOctEntries) {
-            if (!octIds.has(ent.id)) {
-              octEntries.push(ent);
-            }
-          }
-          d.months['2026-10'].entries = octEntries;
+      if (!existingIds.has(emi5236Id)) {
+        d.recurring.push({
+          id: emi5236Id,
+          label: 'EMI — 5236',
+          amount: 5236,
+          dueDay: 5,
+          alertDaysBefore: 5,
+          category: 'repayment',
+          isLoan: true,
+          totalBorrowed: null,
+          tenureMonths: null,
+          history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
         });
-        return true;
-      };
-    }
-  }, [update]);
+      } else {
+        const r = d.recurring.find(x => x.id === emi5236Id);
+        r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
+      }
+
+      if (!existingIds.has(emi2094Id)) {
+        d.recurring.push({
+          id: emi2094Id,
+          label: 'EMI — 2094',
+          amount: 2094,
+          dueDay: 5,
+          alertDaysBefore: 5,
+          category: 'repayment',
+          isLoan: true,
+          totalBorrowed: null,
+          tenureMonths: null,
+          history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
+        });
+      } else {
+        const r = d.recurring.find(x => x.id === emi2094Id);
+        r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
+      }
+
+      if (!existingIds.has(emi733Id)) {
+        d.recurring.push({
+          id: emi733Id,
+          label: 'EMI — 733',
+          amount: 733,
+          dueDay: 5,
+          alertDaysBefore: 5,
+          category: 'repayment',
+          isLoan: true,
+          totalBorrowed: null,
+          tenureMonths: null,
+          history: { '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' },
+        });
+      } else {
+        const r = d.recurring.find(x => x.id === emi733Id);
+        r.history = { ...r.history, '2026-09': 'paid', '2026-10': 'paid', '2026-11': 'paid' };
+      }
+
+      if (!d.months['2026-09']) {
+        d.months['2026-09'] = { basepower: 0, entries: [] };
+      }
+      const sepEntries = d.months['2026-09'].entries || [];
+      const sepIds = new Set(sepEntries.map(e => e.id));
+
+      const newSepEntries = [
+        { id: 'emi_5236_sep05', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-09-05', time: '11:24', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
+        { id: 'emi_5236_sep09', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-09-09', time: '14:15', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
+        { id: 'emi_2094_sep09', amount: 2094, type: 'debit', label: 'EMI — 2094', category: 'repayment', date: '2026-09-09', time: '15:30', recurringId: emi2094Id, isRecurringEntry: true, returns: [] },
+        { id: 'emi_733_sep09',  amount: 733,  type: 'debit', label: 'EMI — 733',  category: 'repayment', date: '2026-09-09', time: '15:42', recurringId: emi733Id,  isRecurringEntry: true, returns: [] },
+      ];
+
+      for (const ent of newSepEntries) {
+        if (!sepIds.has(ent.id)) {
+          sepEntries.push(ent);
+        }
+      }
+      d.months['2026-09'].entries = sepEntries;
+
+      if (!d.months['2026-10']) {
+        d.months['2026-10'] = { basepower: 0, entries: [] };
+      }
+      const octEntries = d.months['2026-10'].entries || [];
+      const octIds = new Set(octEntries.map(e => e.id));
+
+      const newOctEntries = [
+        { id: 'emi_5236_oct20', amount: 5236, type: 'debit', label: 'EMI — 5236', category: 'repayment', date: '2026-10-20', time: '10:18', recurringId: emi5236Id, isRecurringEntry: true, returns: [] },
+        { id: 'emi_2094_oct20', amount: 2094, type: 'debit', label: 'EMI — 2094', category: 'repayment', date: '2026-10-20', time: '11:05', recurringId: emi2094Id, isRecurringEntry: true, returns: [] },
+        { id: 'emi_733_oct20',  amount: 733,  type: 'debit', label: 'EMI — 733',  category: 'repayment', date: '2026-10-20', time: '11:22', recurringId: emi733Id,  isRecurringEntry: true, returns: [] },
+      ];
+
+      for (const ent of newOctEntries) {
+        if (!octIds.has(ent.id)) {
+          octEntries.push(ent);
+        }
+      }
+      d.months['2026-10'].entries = octEntries;
+    });
+  }, [ready, activeProfileId, data]);
 
 
   const defCategories = currentProfile.id === 'business' ? DEFAULT_CATEGORIES_BUSINESS : DEFAULT_CATEGORIES;
@@ -153,24 +154,23 @@ export function useStore(uid_user, activeProfileId = 'personal') {
 
   function addEntry(entry) {
     const newId = uid();
+    const entryDate = entry.date || todayStr();
+    const targetMonthKey = entryDate.slice(0, 7) || currentKey;
+
     update(d => {
-      getMonthWithCarryForward(d, currentKey).entries.push({ ...entry, id: newId, returns: [] });
+      getMonthWithCarryForward(d, targetMonthKey).entries.push({ ...entry, id: newId, returns: [] });
       if (entry.recurringId) {
         const r = (d.recurring || []).find(x => x.id === entry.recurringId);
         if (r) {
           if (!r._entryId) r._entryId = {};
-          r._entryId[currentKey] = newId;
+          r._entryId[targetMonthKey] = newId;
         }
       }
     });
 
     const activeWebhook = sheetWebhookUrl || data?.sheetWebhookUrl;
     if (activeProfileId === 'business' && activeWebhook) {
-      pushToGoogleSheet(activeWebhook, entry).then(ok => {
-        if (ok) {
-          syncGoogleSheet(activeWebhook).catch(() => {});
-        }
-      }).catch(e => console.warn('Google Sheet push error:', e));
+      pushToGoogleSheet(activeWebhook, entry).catch(e => console.warn('Google Sheet push error:', e));
     }
 
     return newId;
@@ -457,9 +457,19 @@ export function useStore(uid_user, activeProfileId = 'personal') {
   function importSheetData() {
     update(d => {
       if (!d.months) d.months = {};
+      const mo = d.months['2026-10'] || { basepower: 0, entries: [] };
+      const existing = mo.entries || [];
+      const sheetFPs = new Set(
+        SHEET_ENTRIES_OCT_2026.map(se => `${se.date}_${se.type}_${se.amount}_${(se.label || '').toLowerCase().trim()}`)
+      );
+      const preserved = existing.filter(ee => {
+        if (ee.id && ee.id.startsWith('sh_')) return false;
+        const fp = `${ee.date}_${ee.type}_${ee.amount}_${(ee.label || '').toLowerCase().trim()}`;
+        return !sheetFPs.has(fp);
+      });
       d.months['2026-10'] = {
-        basepower: 0,
-        entries: JSON.parse(JSON.stringify(SHEET_ENTRIES_OCT_2026)),
+        basepower: mo.basepower || 0,
+        entries: [...JSON.parse(JSON.stringify(SHEET_ENTRIES_OCT_2026)), ...preserved],
       };
       d.categories = mergeCategories(d.categories, 'business');
       d.partners = JSON.parse(JSON.stringify(DEFAULT_BUSINESS_PARTNERS));
@@ -529,7 +539,10 @@ export function useStore(uid_user, activeProfileId = 'personal') {
   async function syncGoogleSheet(customUrl) {
     const url = (customUrl !== undefined ? customUrl : (sheetWebhookUrl || data?.sheetWebhookUrl))?.trim();
     if (!url) {
-      importSheetData();
+      const hasAnyEntries = Object.values(data?.months || {}).some(m => (m.entries || []).length > 0);
+      if (!hasAnyEntries) {
+        importSheetData();
+      }
       return { success: true, count: SHEET_ENTRIES_OCT_2026.length, isLive: false };
     }
 
@@ -563,19 +576,34 @@ export function useStore(uid_user, activeProfileId = 'personal') {
         if (!d.months) d.months = {};
 
         // Group entries dynamically by month key
-        const byMonth = {};
+        const sheetByMonth = {};
         mappedEntries.forEach(entry => {
           const mKey = (entry.date && entry.date.slice(0, 7)) || '2026-10';
-          if (!byMonth[mKey]) byMonth[mKey] = [];
-          byMonth[mKey].push(entry);
+          if (!sheetByMonth[mKey]) sheetByMonth[mKey] = [];
+          sheetByMonth[mKey].push(entry);
         });
 
-        if (!byMonth['2026-10']) byMonth['2026-10'] = [];
+        if (!sheetByMonth['2026-10']) sheetByMonth['2026-10'] = [];
 
-        Object.entries(byMonth).forEach(([mKey, entries]) => {
+        Object.entries(sheetByMonth).forEach(([mKey, sheetEntries]) => {
+          const currentMo = d.months[mKey] || { basepower: 0, entries: [] };
+          const existingList = currentMo.entries || [];
+
+          // Create set of sheet entry fingerprints
+          const sheetFPs = new Set(
+            sheetEntries.map(se => `${se.date}_${se.type}_${se.amount}_${(se.label || '').toLowerCase().trim()}`)
+          );
+
+          // Preserve any local user-added entries that haven't appeared in the sheet yet
+          const preservedLocal = existingList.filter(ee => {
+            if (ee.id && ee.id.startsWith('sh_')) return false; // replace previous sheet rows
+            const fp = `${ee.date}_${ee.type}_${ee.amount}_${(ee.label || '').toLowerCase().trim()}`;
+            return !sheetFPs.has(fp);
+          });
+
           d.months[mKey] = {
-            basepower: d.months[mKey]?.basepower || 0,
-            entries,
+            basepower: currentMo.basepower || 0,
+            entries: [...sheetEntries, ...preservedLocal],
           };
         });
 

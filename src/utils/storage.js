@@ -37,11 +37,11 @@ export const PROFILES = [
 ];
 
 export const DEFAULT_BUSINESS_PARTNERS = [
-  { id: 'bhuvan',  name: 'Bhuvan',  sharePct: 38.0, withdrawn: 567.50, color: '#a78bfa' },
-  { id: 'kushal',  name: 'Kushal',  sharePct: 15.5, withdrawn: 567.50, color: '#38bdf8' },
-  { id: 'amulya',  name: 'Amulya',  sharePct: 15.5, withdrawn: 0,      color: '#fbbf24' },
-  { id: 'deepika', name: 'Deepika', sharePct: 15.5, withdrawn: 0,      color: '#f472b6' },
-  { id: 'anagha',  name: 'Anagha',  sharePct: 15.5, withdrawn: 0,      color: '#34d399' },
+  { id: 'bhuvan',  name: 'Bhuvan',  sharePct: 38.0, allocated: 2169.80, withdrawn: 567.50, available: 1602.30, color: '#a78bfa' },
+  { id: 'kushal',  name: 'Kushal',  sharePct: 15.5, allocated: 885.05,  withdrawn: 567.50, available: 317.55,  color: '#38bdf8' },
+  { id: 'amulya',  name: 'Amulya',  sharePct: 15.5, allocated: 885.05,  withdrawn: 0,      available: 885.05,  color: '#fbbf24' },
+  { id: 'deepika', name: 'Deepika', sharePct: 15.5, allocated: 885.05,  withdrawn: 0,      available: 885.05,  color: '#f472b6' },
+  { id: 'anagha',  name: 'Anagha',  sharePct: 15.5, allocated: 885.05,  withdrawn: 0,      available: 885.05,  color: '#34d399' },
 ];
 
 export const SHEET_ENTRIES_OCT_2026 = [
@@ -62,6 +62,10 @@ export const SHEET_ENTRIES_OCT_2026 = [
   { id: 'sh_15', type: 'debit',  label: 'Petrol',                      amount: 600,    category: 'food_travel',        date: '2026-10-23', time: '09:00', returns: [] },
   { id: 'sh_16', type: 'debit',  label: 'Profit Withdrawal - Kushal',  amount: 567.50, category: 'share_distribution', date: '2026-10-23', time: '10:00', returns: [], partner: 'Kushal' },
   { id: 'sh_17', type: 'debit',  label: 'Profit Withdrawal - Bhuvan',  amount: 567.50, category: 'share_distribution', date: '2026-10-23', time: '10:05', returns: [], partner: 'Bhuvan' },
+  { id: 'sh_18', type: 'debit',  label: 'Petrol - Bhuvan - 100',       amount: 100,    category: 'food_travel',        date: '2026-10-24', time: '09:00', returns: [] },
+  { id: 'sh_19', type: 'debit',  label: 'Bhavani Printout for Naivedyam', amount: 80,  category: 'raw_materials',      date: '2026-10-24', time: '10:00', returns: [] },
+  { id: 'sh_20', type: 'debit',  label: 'Petrol-Kushal',               amount: 600,    category: 'food_travel',        date: '2026-10-24', time: '11:00', returns: [] },
+  { id: 'sh_21', type: 'credit', label: 'Advance from Naivedyam 2000, Balance 2800', amount: 2000, category: 'sale',  date: '2026-10-27', time: '10:05', returns: [] },
 ];
 
 export const DEFAULT_CATEGORIES_BUSINESS = {

@@ -74,6 +74,7 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
           }
         }
         const nextData = {
+          ...d,
           months,
           categories: mergeCategories(d.categories, profileId),
           partners:   partners || (profileId === 'business' ? DEFAULT_BUSINESS_PARTNERS : []),
@@ -81,6 +82,7 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
           radar:      d.radar      || [],
           trash:      d.trash      || [],
           expected:   d.expected   || [],
+          sheetWebhookUrl: d.sheetWebhookUrl || '',
         };
         try { localStorage.setItem(cacheKey, JSON.stringify(nextData)); } catch (_) {}
         setData(nextData);
