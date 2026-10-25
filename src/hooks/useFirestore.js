@@ -16,59 +16,6 @@ function userDocRef(uid, docId = 'personal') {
   return doc(db, 'users', uid, 'data', docId);
 }
 
-// Detection helpers to strictly isolate data
-export function isBusinessEntry(e) {
-  if (!e) return false;
-  const cat = String(e.category || '').toLowerCase();
-  const lbl = String(e.label || '').toLowerCase();
-  return (
-    cat === 'raw_materials' ||
-    cat === 'sale' ||
-    cat === 'investment' ||
-    cat === 'share_distribution' ||
-    cat === 'food_travel' ||
-    cat === 'materials' ||
-    cat === 'marketing' ||
-    cat === 'software' ||
-    cat === 'salaries' ||
-    lbl.includes('nfc') ||
-    lbl.includes('naivedyam') ||
-    lbl.includes('testing 1') ||
-    lbl.includes('acrylic') ||
-    lbl.includes('k2n') ||
-    lbl.includes('temple') ||
-    lbl === 'kjf' ||
-    lbl.includes('kushal petrol') ||
-    lbl.includes('bhuvan petrol') ||
-    lbl.includes('first day sale') ||
-    lbl.includes('way back to hassan')
-  );
-}
-
-export function isPersonalEntry(e) {
-  if (!e) return false;
-  const lbl = String(e.label || '').toLowerCase();
-  const cat = String(e.category || '').toLowerCase();
-  return (
-    lbl.includes('egg roll') ||
-    lbl.includes('dosa tindi') ||
-    lbl.includes('amma gym') ||
-    lbl.includes('laptop battery') ||
-    lbl.includes('gowri') ||
-    lbl.includes('power bank') ||
-    lbl.includes('resume print') ||
-    lbl.includes('emi —') ||
-    lbl.includes('slice -') ||
-    lbl.includes('bmtc') ||
-    lbl.includes('lenkart') ||
-    lbl.includes('adjusting to current balance') ||
-    lbl.includes('puff and juice') ||
-    cat === 'slice' ||
-    cat === 'repayment' ||
-    cat === 'borrow_cash'
-  );
-}
-
 export function useFirestore(uid, docId = 'personal', profileId = 'personal', userEmail = '') {
   const [data, setData]       = useState(null);
   const [ready, setReady]     = useState(false);
@@ -120,7 +67,6 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
     try {
       localStorage.removeItem('b1-v2');
       localStorage.removeItem('b1-v2-main');
-      localStorage.removeItem(`b1-v2-${uid}`);
     } catch (_) {}
 
     // If account is bhuvan1624@gmail.com, purge its local caches immediately
@@ -132,22 +78,15 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
       } catch (_) {}
     }
 
-    // Try loading profile-specific cache with strict validation
+    // Load profile-specific cache for instant UI response
     try {
       const cached = !isWipedUser ? localStorage.getItem(cacheKey) : null;
       if (cached) {
         const parsed = JSON.parse(cached);
-        const octEntries = parsed?.months?.['2026-10']?.entries || [];
-        // If cached personal has business entries or cached business has personal entries, discard cache
-        if (profileId === 'personal' && octEntries.some(isBusinessEntry)) {
-          localStorage.removeItem(cacheKey);
-          setData(emptyData());
-        } else if (profileId === 'business' && octEntries.some(isPersonalEntry)) {
-          localStorage.removeItem(cacheKey);
-          setData(emptyData());
-        } else {
-          setData(parsed);
+        if (profileId === 'business') {
+          parsed.recurring = [];
         }
+        setData(parsed);
         setReady(true);
       } else {
         setData(emptyData());
@@ -191,92 +130,32 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
           }
         }
 
-        // --- BUSINESS PROFILE VALIDATION & PURGE ---
+        // --- MOVE EMI PART FROM BUSINESS TO PERSONAL ---
         if (profileId === 'business' && isOwner) {
-          let updated = false;
-          const octEntries = months['2026-10']?.entries || [];
-          const hasPersonalInOct = octEntries.some(isPersonalEntry);
-
-          if (hasPersonalInOct) {
-            // Remove any personal entries that accidentally leaked into business
-            months['2026-10'].entries = octEntries.filter(e => !isPersonalEntry(e));
-            updated = true;
-          }
-
-          if ((months['2026-10']?.entries?.length || 0) === 0) {
-            months['2026-10'] = { basepower: 0, entries: [...SHEET_ENTRIES_OCT_2026] };
-            updated = true;
+          // If Business has any recurring EMIs, transfer them to Personal and clear Business
+          if (recurring && recurring.length > 0) {
+            const personalRef = userDocRef(uid, 'personal');
+            setDoc(personalRef, { recurring: recurring }, { merge: true })
+              .catch(e => console.warn('Moving recurring from business to personal error:', e));
+            setDoc(ref, { recurring: [] }, { merge: true })
+              .catch(e => console.warn('Clearing recurring in business doc error:', e));
+            recurring = [];
           }
 
           if (!partners || partners.length === 0) {
             partners = DEFAULT_BUSINESS_PARTNERS;
-            updated = true;
-          }
-
-          if (updated) {
-            setDoc(ref, {
-              months,
-              categories: mergeCategories(d.categories, 'business'),
-              partners,
-              recurring: d.recurring || [],
-              radar: d.radar || [],
-              trash: d.trash || [],
-              expected: d.expected || [],
-              sheetWebhookUrl: d.sheetWebhookUrl || '',
-            }).catch(e => console.warn('Cleaning business doc error:', e));
           }
         }
 
-        // --- PERSONAL PROFILE VALIDATION & PURGE ---
+        // --- PERSONAL PROFILE ---
         if (profileId === 'personal' && isOwner) {
-          let updated = false;
+          partners = []; // Personal never has partners
 
-          // Check if October 2026 has business entries or missing personal entries
-          const octEntries = months['2026-10']?.entries || [];
-          const hasBusinessInOct = octEntries.some(isBusinessEntry);
-
-          if (hasBusinessInOct || octEntries.length < 20) {
-            months['2026-10'] = {
-              basepower: 15917,
-              basepowerAutoFilled: false,
-              entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)),
-            };
-            updated = true;
-          }
-
-          // Check if September 2026 is missing or has business entries
-          const sepEntries = months['2026-09']?.entries || [];
-          if (!months['2026-09'] || !sepEntries || sepEntries.length === 0 || sepEntries.some(isBusinessEntry)) {
-            months['2026-09'] = {
-              basepower: 0,
-              basepowerAutoFilled: false,
-              entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)),
-            };
-            updated = true;
-          }
-
-          // Check recurring EMIs
+          // Ensure recurring EMIs are present in Personal
           if (!recurring || recurring.length === 0) {
             recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
-            updated = true;
-          }
-
-          // Personal must NEVER have partners
-          if (partners && partners.length > 0) {
-            partners = [];
-            updated = true;
-          }
-
-          if (updated) {
-            setDoc(ref, {
-              months,
-              categories: mergeCategories(d.categories, 'personal'),
-              partners: [],
-              recurring,
-              radar: d.radar || [],
-              trash: d.trash || [],
-              expected: d.expected || [],
-            }).catch(e => console.warn('Purging business data from personal doc error:', e));
+            setDoc(ref, { recurring }, { merge: true })
+              .catch(e => console.warn('Seeding recurring in personal doc error:', e));
           }
         }
 
@@ -285,15 +164,17 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
           months,
           categories: mergeCategories(d.categories, profileId),
           partners:   profileId === 'business' ? (partners || DEFAULT_BUSINESS_PARTNERS) : [],
-          recurring:  recurring,
+          recurring:  profileId === 'business' ? [] : recurring,
           radar:      d.radar      || [],
           trash:      d.trash      || [],
           expected:   d.expected   || [],
           sheetWebhookUrl: profileId === 'business' ? (d.sheetWebhookUrl || '') : '',
         };
+
         try { localStorage.setItem(cacheKey, JSON.stringify(nextData)); } catch (_) {}
         setData(nextData);
       } else {
+        // Document does not exist yet: initialize cleanly
         const empty = emptyData();
         setDoc(ref, empty);
         try { localStorage.setItem(cacheKey, JSON.stringify(empty)); } catch (_) {}
@@ -306,53 +187,10 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
         const raw = localStorage.getItem(cacheKey);
         if (raw) {
           const parsed = JSON.parse(raw);
-          let months = parsed.months || {};
-          let partners = parsed.partners;
-          let recurring = parsed.recurring || [];
-
-          if (profileId === 'business') {
-            const octEntries = months['2026-10']?.entries || [];
-            if (octEntries.some(isPersonalEntry)) {
-              months['2026-10'].entries = octEntries.filter(e => !isPersonalEntry(e));
-            }
-            if ((months['2026-10']?.entries?.length || 0) === 0) {
-              months['2026-10'] = { basepower: 0, entries: [...SHEET_ENTRIES_OCT_2026] };
-            }
-            if (!partners || partners.length === 0) {
-              partners = DEFAULT_BUSINESS_PARTNERS;
-            }
-          }
-
-          if (profileId === 'personal' && isOwner) {
-            const octEntries = months['2026-10']?.entries || [];
-            if (octEntries.some(isBusinessEntry) || octEntries.length < 20) {
-              months['2026-10'] = {
-                basepower: 15917,
-                basepowerAutoFilled: false,
-                entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)),
-              };
-            }
-            if (!months['2026-09'] || !months['2026-09'].entries || months['2026-09'].entries.length === 0) {
-              months['2026-09'] = {
-                basepower: 0,
-                basepowerAutoFilled: false,
-                entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)),
-              };
-            }
-            if (!recurring || recurring.length === 0) {
-              recurring = JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS));
-            }
-            partners = [];
-          }
-
           setData({
             ...parsed,
-            months,
-            partners: profileId === 'business' ? (partners || DEFAULT_BUSINESS_PARTNERS) : [],
-            categories: mergeCategories(parsed.categories, profileId),
-            recurring,
-            trash: parsed.trash || [],
-            expected: parsed.expected || [],
+            recurring: profileId === 'business' ? [] : (parsed.recurring || []),
+            partners: profileId === 'business' ? (parsed.partners || DEFAULT_BUSINESS_PARTNERS) : [],
           });
         } else {
           setData(emptyData());
@@ -366,8 +204,10 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
   const save = useCallback(async (newData) => {
     if (!uid) return;
     setSyncing(true);
-    // Sanitize any potential undefined values which cause Firestore setDoc rejections
     const cleanData = JSON.parse(JSON.stringify(newData));
+    if (profileId === 'business') {
+      cleanData.recurring = [];
+    }
     try { localStorage.setItem(cacheKey, JSON.stringify(cleanData)); } catch (_) {}
     try {
       await setDoc(userDocRef(uid, docId), cleanData);
@@ -376,7 +216,7 @@ export function useFirestore(uid, docId = 'personal', profileId = 'personal', us
     } finally {
       setSyncing(false);
     }
-  }, [uid, docId, cacheKey]);
+  }, [uid, docId, cacheKey, profileId]);
 
   const update = useCallback((fn) => {
     setData(prev => {

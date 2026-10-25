@@ -234,14 +234,16 @@ function AppInner({ user, signOut }) {
         {tab === 'command' && (
           <>
             <StatusPanel monthData={monthData} overall={overall} data={data} onSetBasepower={setBasepower} />
-            <Recurring recurring={recurring} currentKey={currentKey} onMark={(id, status) => {
-              if (status === 'paid') {
-                const rec = recurring.find(r => r.id === id);
-                if (rec) handleRecurringPaid(rec);
-              } else {
-                markRecurring(id, status);
-              }
-            }} inline />
+            {activeProfileId === 'personal' && (
+              <Recurring recurring={recurring} currentKey={currentKey} onMark={(id, status) => {
+                if (status === 'paid') {
+                  const rec = recurring.find(r => r.id === id);
+                  if (rec) handleRecurringPaid(rec);
+                } else {
+                  markRecurring(id, status);
+                }
+              }} inline />
+            )}
             <div className={s.feedHeader}>
               <span className={s.feedLabel}>RECENT TRANSACTIONS</span>
               <div className={s.basepowerRow}>
