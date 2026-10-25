@@ -16,16 +16,20 @@ function userDocRef(uid, docId = 'main') {
   return doc(db, 'users', uid, 'data', docId);
 }
 
-export function useFirestore(uid, docId = 'main', profileId = 'personal') {
+export function useFirestore(uid, docId = 'main', profileId = 'personal', userEmail = '') {
   const [data, setData]       = useState(null);
   const [ready, setReady]     = useState(false);
   const [syncing, setSyncing] = useState(false);
+
+  const normalizedEmail = (userEmail || '').toLowerCase().trim();
+  const isOwner = normalizedEmail === 'bhuvibhuvan1624@gmail.com';
+  const isWipedUser = normalizedEmail === 'bhuvan1624@gmail.com';
 
   const cacheKey = docId === 'main' ? 'b1-v2' : `b1-v2-${docId}`;
   const defCategories = profileId === 'business' ? DEFAULT_CATEGORIES_BUSINESS : DEFAULT_CATEGORIES;
 
   function emptyData() {
-    if (profileId === 'business') {
+    if (profileId === 'business' && isOwner) {
       return {
         months: {
           '2026-10': { basepower: 0, entries: [...SHEET_ENTRIES_OCT_2026] }
@@ -38,25 +42,40 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
         expected: []
       };
     }
-    return {
-      months: {
-        '2026-09': { basepower: 0, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)) },
-        '2026-10': { basepower: 15917, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)) },
-      },
-      categories: defCategories,
-      partners: [],
-      recurring: JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS)),
-      radar: [],
-      trash: [],
-      expected: []
-    };
+    if (profileId === 'personal' && isOwner) {
+      return {
+        months: {
+          '2026-09': { basepower: 0, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_SEP_2026)) },
+          '2026-10': { basepower: 15917, entries: JSON.parse(JSON.stringify(PERSONAL_ENTRIES_OCT_2026)) },
+        },
+        categories: defCategories,
+        partners: [],
+        recurring: JSON.parse(JSON.stringify(PERSONAL_RECURRING_EMIS)),
+        radar: [],
+        trash: [],
+        expected: []
+      };
+    }
+    // Clean empty template for all other users / non-owner accounts
+    return { months: {}, categories: defCategories, recurring: [], partners: [], radar: [], trash: [], expected: [] };
   }
 
   useEffect(() => {
     if (!uid) return;
+
+    // If account is bhuvan1624@gmail.com, purge its local caches immediately
+    if (isWipedUser) {
+      try {
+        localStorage.removeItem(cacheKey);
+        localStorage.removeItem('b1-v2');
+        localStorage.removeItem('b1-v2-main');
+        localStorage.removeItem('b1-v2-business');
+      } catch (_) {}
+    }
+
     // Load cached data for this docId immediately so switching profiles is instant with no flicker
     try {
-      const cached = localStorage.getItem(cacheKey);
+      const cached = !isWipedUser ? localStorage.getItem(cacheKey) : null;
       if (cached) {
         setData(JSON.parse(cached));
         setReady(true);
@@ -77,7 +96,33 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
         let partners = d.partners;
         let recurring = d.recurring || [];
 
-        if (profileId === 'business') {
+        // Specifically wipe any cloud data linked to bhuvan1624@gmail.com
+        if (isWipedUser) {
+          const hasData = Object.keys(months).length > 0 || recurring.length > 0 || (d.trash && d.trash.length > 0);
+          if (hasData) {
+            const cleanEmpty = {
+              months: {},
+              categories: defCategories,
+              partners: [],
+              recurring: [],
+              radar: [],
+              trash: [],
+              expected: []
+            };
+            setDoc(ref, cleanEmpty).catch(e => console.warn('Wiping bhuvan1624 doc error:', e));
+            try {
+              localStorage.removeItem(cacheKey);
+              localStorage.removeItem('b1-v2');
+              localStorage.removeItem('b1-v2-main');
+              localStorage.removeItem('b1-v2-business');
+            } catch (_) {}
+            setData(cleanEmpty);
+            setReady(true);
+            return;
+          }
+        }
+
+        if (profileId === 'business' && isOwner) {
           const totalEntries = Object.values(months).reduce((acc, m) => acc + (m.entries?.length || 0), 0);
           if (totalEntries === 0) {
             months = {
@@ -102,7 +147,7 @@ export function useFirestore(uid, docId = 'main', profileId = 'personal') {
           }
         }
 
-        if (profileId === 'personal') {
+        if (profileId === 'personal' && isOwner) {
           const totalEntries = Object.values(months).reduce((acc, m) => acc + (m.entries?.length || 0), 0);
           if (totalEntries === 0) {
             months = {

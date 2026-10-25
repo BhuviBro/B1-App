@@ -18,7 +18,7 @@ export function useStore(uid_user, activeProfileId = 'personal', userEmail = '')
   const allowedProfiles = isOwner ? PROFILES : PROFILES.filter(p => p.id === 'personal');
   const effectiveProfileId = isOwner ? activeProfileId : 'personal';
   const currentProfile = allowedProfiles.find(p => p.id === effectiveProfileId) || allowedProfiles[0];
-  const { data, ready, syncing, update } = useFirestore(uid_user, currentProfile.docId, currentProfile.id);
+  const { data, ready, syncing, update } = useFirestore(uid_user, currentProfile.docId, currentProfile.id, userEmail);
   const [currentKey, setCurrentKey] = useState(INIT_KEY);
   const [theme, setTheme] = useState(() => localStorage.getItem('b1-theme') || 'dark');
 
